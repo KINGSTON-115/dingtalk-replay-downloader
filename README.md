@@ -1,80 +1,78 @@
-# DingTalk Replay Local Learning Downloader
+# 钉钉直播回放下载器
 
-一个本地运行的 Chrome/Edge Manifest V3 学习项目，用来研究“已授权钉钉直播回放”从回放链接解析到 HLS 分片下载、合并和转封装的完整流程。
+Chrome / Edge 本地扩展，用于下载当前账号已经有权限播放的钉钉直播回放。
 
-> 仅用于你有权访问、保存和学习分析的回放内容。本项目不包含任何第三方商业插件代码，不修改其他扩展，不绕过任何商业校验、平台登录、访问控制或 DRM。
+[下载最新版](https://github.com/KINGSTON-115/dingtalk-replay-downloader/releases/latest) · [实现原理](docs/ARCHITECTURE.md) · [MIT License](LICENSE)
+
+> 仅用于你有权访问、保存和学习分析的回放内容。本项目不包含任何第三方商业插件代码，不修改其他扩展，不绕过商业校验、平台登录、访问控制或 DRM。
+
+## 快速安装
+
+1. 打开 [Releases](https://github.com/KINGSTON-115/dingtalk-replay-downloader/releases/latest)，下载 `dingtalk-replay-downloader-*.zip`。
+2. 解压 zip，得到一个文件夹。
+3. 打开浏览器扩展管理页：
+   - Chrome: `chrome://extensions`
+   - Edge: `edge://extensions`
+4. 开启“开发者模式”。
+5. 把解压后的文件夹直接拖到扩展管理页面，即可安装。
+
+如果拖拽安装没有反应，点击“加载解压缩的扩展”，选择那个包含 `manifest.json` 的文件夹。
+
+## 使用方法
+
+1. 在同一个浏览器里登录钉钉网页，并确认目标回放能正常播放。
+2. 打开扩展，粘贴钉钉直播回放链接。
+3. 选择输出格式：
+   - `MP4 via mux.js`: 尝试保存为 MP4。
+   - `Merged TS`: 保存合并后的 TS。
+4. 点击下载。
+
+MP4 转封装失败时，会自动回退保存 `.ts` 文件。
 
 ## 功能
 
-- 输入钉钉回放链接，或包含 `roomId=...&liveUuid=...` 的参数文本。
-- 读取当前浏览器中已经登录钉钉网页的 Cookie。
-- 调用 `https://lv.dingtalk.com/getOpenLiveInfo` 解析回放信息。
-- 解析 HLS `m3u8`，支持 master playlist 自动选择高码率媒体列表。
-- 下载 TS 分片，支持可配置并发数。
-- 支持 HLS `AES-128` 分片解密，前提是播放列表中公开给当前授权会话的 key 可访问。
-- 合并为 `.ts`，或通过开源 `mux.js` 转封装为 `.mp4`。
-- 支持中文 / English 界面切换。
+- 从回放链接提取 `roomId` 和 `liveUuid`。
+- 复用当前浏览器里已经登录钉钉的 Cookie。
+- 解析 `m3u8`，下载并合并 TS 分片。
+- 支持可访问的 HLS `AES-128` 分片解密。
+- 支持 TS 合并和 MP4 转封装。
+- 支持中文 / English 切换。
 
-## 安装
-
-1. 下载或克隆这个仓库。
-2. 打开 Chrome/Edge 的扩展管理页：
-   - Chrome: `chrome://extensions`
-   - Edge: `edge://extensions`
-3. 开启“开发者模式”。
-4. 点击“加载解压缩的扩展”。
-5. 选择本仓库目录，也就是包含 `manifest.json` 的目录。
-6. 在同一个浏览器中登录钉钉网页版，并确认你可以正常播放目标回放。
-
-## 使用
-
-1. 打开扩展弹窗。
-2. 粘贴钉钉直播回放链接。
-3. 选择输出格式：
-   - `MP4 via mux.js`: 尝试转封装为 MP4。
-   - `Merged TS`: 直接保存合并后的 TS。
-4. 设置下载并发数。默认 `4`，网络或机器较弱时可以调低。
-5. 点击下载按钮。
-
-如果 MP4 转封装失败，扩展会自动回退保存 `.ts` 文件。
-
-## 原理
-
-简化流程如下：
+## 原理简图
 
 ```text
 回放链接
   -> 提取 roomId / liveUuid
-  -> 读取浏览器钉钉 Cookie
+  -> 读取钉钉 Cookie
   -> 请求 getOpenLiveInfo
-  -> 获得 playbackUrl / m3u8
-  -> 解析 playlist / key / TS 分片
-  -> 下载分片
+  -> 获取 m3u8
+  -> 下载 TS 分片
   -> 必要时 AES-128 解密
   -> 合并 TS
-  -> 可选 mux.js 转封装 MP4
-  -> chrome.downloads 保存文件
+  -> 可选转封装 MP4
+  -> 保存到本地
 ```
 
-更多实现细节见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+## 常见问题
+
+**没有回放权限可以下载吗？**  
+不可以。扩展只使用你当前浏览器已有的钉钉登录态，钉钉服务端拒绝访问的回放不会被下载。
+
+**需要安装 Node.js 或运行构建命令吗？**  
+不需要。下载 Release zip，解压后直接加载扩展即可。
+
+**为什么有时只能保存 TS？**  
+TS 到 MP4 是转封装，不是重新编码。源流不规范或浏览器环境不支持时可能失败，此时保存 TS 是预期回退。
 
 ## 权限说明
 
-`manifest.json` 中声明的权限用途：
-
-- `cookies`: 读取当前浏览器中钉钉相关 Cookie，用于访问你已经有权限播放的回放。
-- `downloads`: 保存合并后的视频文件。
-- `tabs`: 从当前标签页辅助填充回放链接。
-- `https://*.dingtalk.com/*`: 访问钉钉回放信息接口。
-- `<all_urls>`: HLS 分片和 key 可能位于钉钉返回的不同 CDN 域名。
-
-## 限制
-
-- 只适用于当前登录账号本来就能播放的回放。
-- 无权限、过期、被删除、组织策略禁止访问的回放不会被下载。
-- 不处理 DRM 或浏览器加密媒体扩展保护的内容。
-- 当前实现会在内存中合并分片，超长回放可能占用较多内存。
-- 钉钉接口、字段或鉴权策略变化时，解析逻辑可能需要更新。
+| 权限 | 用途 |
+| --- | --- |
+| `cookies` | 读取钉钉相关 Cookie，用于访问已授权回放 |
+| `downloads` | 保存视频文件 |
+| `tabs` | 从当前标签页辅助填充回放链接 |
+| `https://*.dingtalk.com/*` | 请求钉钉回放信息接口 |
+| `<all_urls>` | 访问钉钉返回的 HLS/CDN 分片与 key 地址 |
 
 ## 开发检查
 

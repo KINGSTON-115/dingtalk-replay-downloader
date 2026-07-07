@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DingTalk Replay Local Learning Downloader",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local-only learning extension for downloading DingTalk replay videos you are authorized to view.",
   "minimum_chrome_version": "111",
   "permissions": [
