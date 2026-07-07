@@ -1,0 +1,19 @@
+.DS_Store
+Thumbs.db
+
+# Local editor state
+.idea/
+.vscode/
+*.swp
+
+# Downloaded media and temporary files
+*.mp4
+*.ts
+*.m4s
+*.m3u8
+*.part
+downloads/
+tmp/
+
+# Logs
+*.log
