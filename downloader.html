@@ -3,63 +3,102 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>钉钉回放下载器</title>
+  <title>钉钉直播回放下载器</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div>
-        <h1 data-i18n="appTitle">钉钉回放下载器</h1>
-        <p data-i18n="appSubtitle">本地学习版，仅用于你已有权限访问的回放。</p>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <p class="eyebrow" data-i18n="eyebrow">本地扩展</p>
+          <h1 data-i18n="appTitle">钉钉直播回放</h1>
+        </div>
       </div>
+
       <div class="header-actions">
-        <label class="language-field">
-          <span data-i18n="language">语言</span>
-          <select id="languageSelect">
-            <option value="zh">中文</option>
-            <option value="en">English</option>
-          </select>
-        </label>
-        <button id="openTabBtn" class="ghost" type="button" data-i18n="openTab">打开标签页</button>
+        <button id="openTabBtn" class="button secondary compact" type="button" data-i18n="openTab">独立页</button>
       </div>
     </header>
 
-    <section class="panel">
-      <label class="field">
-        <span data-i18n="replayLink">回放链接</span>
-        <textarea id="replayUrl" rows="5" spellcheck="false" data-i18n-placeholder="replayPlaceholder" placeholder="粘贴钉钉回放链接，或 roomId=...&liveUuid=..."></textarea>
-      </label>
+    <div class="badges" aria-label="项目范围">
+      <span data-i18n="localOnly">本地处理</span>
+      <span data-i18n="authorizedOnly">已授权回放</span>
+      <span data-i18n="noServerAccount">无插件账号系统</span>
+    </div>
 
-      <div class="controls">
-        <label class="field compact">
-          <span data-i18n="output">输出格式</span>
-          <select id="outputFormat">
-            <option value="mp4" data-i18n="mp4Option">MP4 via mux.js</option>
-            <option value="ts" data-i18n="tsOption">合并 TS</option>
-          </select>
-        </label>
-        <label class="field compact">
-          <span data-i18n="concurrency">并发数</span>
-          <input id="concurrency" type="number" min="1" max="12" value="4">
-        </label>
+    <section class="panel source-panel">
+      <div class="section-header">
+        <div>
+          <h2 data-i18n="sourceTitle">回放来源</h2>
+          <p data-i18n="sourceHint">粘贴回放链接，或直接输入 roomId 与 liveUuid。</p>
+        </div>
+        <button id="useCurrentTabBtn" class="button secondary compact" type="button" data-i18n="useCurrentTab">当前页</button>
       </div>
 
-      <div class="actions">
-        <button id="startBtn" type="button" data-i18n="download">下载</button>
-        <button id="cancelBtn" class="ghost danger" type="button" disabled data-i18n="cancel">取消</button>
+      <label class="field">
+        <span data-i18n="replayLink">回放链接</span>
+        <textarea id="replayUrl" rows="5" spellcheck="false" data-i18n-placeholder="replayPlaceholder" placeholder="https://n.dingtalk.com/..."></textarea>
+      </label>
+
+      <div class="field-footer">
+        <span data-i18n="inputHint">支持钉钉回放链接或 roomId=...&liveUuid=...</span>
+        <button id="clearBtn" class="link-button" type="button" data-i18n="clear">清空</button>
       </div>
     </section>
 
-    <section class="status-panel" aria-live="polite">
-      <div class="status-row">
-        <span id="statusText">就绪</span>
-        <span id="progressText">0%</span>
+    <section class="panel settings-panel">
+      <div class="section-header compact-header">
+        <div>
+          <h2 data-i18n="settingsTitle">下载设置</h2>
+        </div>
       </div>
+
+      <div class="settings-grid">
+        <fieldset class="field">
+          <legend data-i18n="output">输出格式</legend>
+          <div class="segmented-control">
+            <label>
+              <input type="radio" name="outputFormat" value="mp4" checked>
+              <span data-i18n="mp4Option">MP4</span>
+            </label>
+            <label>
+              <input type="radio" name="outputFormat" value="ts">
+              <span data-i18n="tsOption">TS</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <label class="field concurrency-field">
+          <span data-i18n="concurrency">并发数</span>
+          <input id="concurrency" type="number" min="1" max="12" value="4" inputmode="numeric">
+        </label>
+      </div>
+    </section>
+
+    <div class="actionbar">
+      <button id="startBtn" class="button primary" type="button" data-i18n="download">开始下载</button>
+      <button id="cancelBtn" class="button danger" type="button" disabled data-i18n="cancel">取消任务</button>
+    </div>
+
+    <section class="status-panel" aria-live="polite">
+      <div class="status-summary">
+        <div class="status-left">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="statusText">就绪</span>
+        </div>
+        <strong id="progressText">0%</strong>
+      </div>
+
       <div class="progress-track">
         <div id="progressBar" class="progress-bar"></div>
       </div>
-      <pre id="log"></pre>
+
+      <div class="log-header">
+        <span data-i18n="activityLog">运行日志</span>
+      </div>
+      <pre id="log" data-i18n-empty="logEmpty" data-empty="等待下载任务..."></pre>
     </section>
   </main>
 

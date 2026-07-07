@@ -1,20 +1,20 @@
 # 钉钉直播回放下载器
 
-Chrome / Edge 本地扩展，用于下载当前账号已经有权限播放的钉钉直播回放。
+用于下载当前账号已经有权限播放的钉钉直播回放。本项目是本地浏览器扩展，适用于 Chrome 和 Edge。
 
-[下载最新版](https://github.com/KINGSTON-115/dingtalk-replay-downloader/releases/latest) · [实现原理](docs/ARCHITECTURE.md) · [MIT License](LICENSE)
+[下载最新版](https://github.com/KINGSTON-115/dingtalk-replay-downloader/releases/latest) · [实现原理](docs/ARCHITECTURE.md) · [MIT 许可证说明](LICENSE.zh-CN.md)
 
 > 仅用于你有权访问、保存和学习分析的回放内容。本项目不包含任何第三方商业插件代码，不修改其他扩展，不绕过商业校验、平台登录、访问控制或 DRM。
 
 ## 快速安装
 
-1. 打开 [Releases](https://github.com/KINGSTON-115/dingtalk-replay-downloader/releases/latest)，下载 `dingtalk-replay-downloader-*.zip`。
+1. 打开 [发布页](https://github.com/KINGSTON-115/dingtalk-replay-downloader/releases/latest)，下载 `dingtalk-replay-downloader-*.zip`。
 2. 解压 zip，得到一个文件夹。
 3. 打开浏览器扩展管理页：
    - Chrome: `chrome://extensions`
    - Edge: `edge://extensions`
 4. 开启“开发者模式”。
-5. 把解压后的文件夹直接拖到扩展管理页面，即可安装。
+5. 把解压后的文件夹直接拖到扩展管理页，即可安装。
 
 如果拖拽安装没有反应，点击“加载解压缩的扩展”，选择那个包含 `manifest.json` 的文件夹。
 
@@ -23,9 +23,9 @@ Chrome / Edge 本地扩展，用于下载当前账号已经有权限播放的钉
 1. 在同一个浏览器里登录钉钉网页，并确认目标回放能正常播放。
 2. 打开扩展，粘贴钉钉直播回放链接。
 3. 选择输出格式：
-   - `MP4 via mux.js`: 尝试保存为 MP4。
-   - `Merged TS`: 保存合并后的 TS。
-4. 点击下载。
+   - `MP4`：尝试保存为 MP4。
+   - `TS`：保存合并后的 TS。
+4. 点击“开始下载”。
 
 MP4 转封装失败时，会自动回退保存 `.ts` 文件。
 
@@ -36,7 +36,7 @@ MP4 转封装失败时，会自动回退保存 `.ts` 文件。
 - 解析 `m3u8`，下载并合并 TS 分片。
 - 支持可访问的 HLS `AES-128` 分片解密。
 - 支持 TS 合并和 MP4 转封装。
-- 支持中文 / English 切换。
+- 界面与文档均以中文维护。
 
 ## 原理简图
 
@@ -59,7 +59,7 @@ MP4 转封装失败时，会自动回退保存 `.ts` 文件。
 不可以。扩展只使用你当前浏览器已有的钉钉登录态，钉钉服务端拒绝访问的回放不会被下载。
 
 **需要安装 Node.js 或运行构建命令吗？**  
-不需要。下载 Release zip，解压后直接加载扩展即可。
+不需要。下载发布页里的 zip，解压后直接加载扩展即可。
 
 **为什么有时只能保存 TS？**  
 TS 到 MP4 是转封装，不是重新编码。源流不规范或浏览器环境不支持时可能失败，此时保存 TS 是预期回退。
@@ -82,8 +82,8 @@ node --check downloader.js
 
 ## 第三方组件
 
-本项目使用 `mux.js` 做 TS 到 MP4 的转封装。它使用 Apache-2.0 许可证，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+本项目使用 `mux.js` 做 TS 到 MP4 的转封装。它使用 Apache-2.0 许可证，详见 [第三方组件说明](THIRD_PARTY_NOTICES.md)。
 
-## License
+## 许可证
 
 MIT

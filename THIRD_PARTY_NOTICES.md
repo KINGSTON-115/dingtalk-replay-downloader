@@ -1,16 +1,16 @@
-# Third-Party Notices
+# 第三方组件说明
 
 ## mux.js
 
-- File: `vendor/mux.min.js`
-- Version: 7.1.0
-- License: Apache-2.0
-- Project: https://github.com/videojs/mux.js
+- 文件：`vendor/mux.min.js`
+- 版本：7.1.0
+- 许可证：Apache-2.0
+- 项目地址：https://github.com/videojs/mux.js
 
-The vendored file keeps its upstream license banner:
+仓库内保留的 `mux.js` 文件自带上游许可证标识：
 
 ```text
 @name mux.js @version 7.1.0 @license Apache-2.0
 ```
 
-This repository is MIT licensed, while `mux.js` remains under its original Apache-2.0 license.
+本仓库整体使用 MIT 许可证；`mux.js` 仍然遵循其原始 Apache-2.0 许可证。

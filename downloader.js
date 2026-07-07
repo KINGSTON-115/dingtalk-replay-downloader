@@ -18,42 +18,52 @@ const COOKIE_DOMAINS = [
 
 const I18N = {
   zh: {
-    pageTitle: "钉钉回放下载器",
-    appTitle: "钉钉回放下载器",
-    appSubtitle: "本地学习版，仅用于你已有权限访问的回放。",
-    language: "语言",
-    openTab: "打开标签页",
+    pageTitle: "钉钉直播回放下载器",
+    eyebrow: "本地扩展",
+    appTitle: "钉钉直播回放",
+    openTab: "独立页",
+    localOnly: "本地处理",
+    authorizedOnly: "已授权回放",
+    noServerAccount: "无插件账号系统",
+    sourceTitle: "回放来源",
+    sourceHint: "粘贴回放链接，或直接输入 roomId 与 liveUuid。",
+    useCurrentTab: "当前页",
     replayLink: "回放链接",
-    replayPlaceholder: "粘贴钉钉回放链接，或 roomId=...&liveUuid=...",
+    replayPlaceholder: "https://n.dingtalk.com/... 或 roomId=...&liveUuid=...",
+    inputHint: "支持钉钉回放链接或 roomId=...&liveUuid=...",
+    clear: "清空",
+    settingsTitle: "下载设置",
     output: "输出格式",
-    mp4Option: "MP4 via mux.js",
-    tsOption: "合并 TS",
+    mp4Option: "MP4",
+    tsOption: "TS",
     concurrency: "并发数",
-    download: "下载",
-    cancel: "取消",
+    download: "开始下载",
+    cancel: "取消任务",
+    activityLog: "运行日志",
+    logEmpty: "等待下载任务...",
     statusIdle: "就绪",
     statusPreparing: "准备中",
-    statusReadingCookies: "正在读取钉钉 Cookie",
-    statusResolving: "正在解析回放地址",
-    statusParsingM3u8: "正在解析 m3u8",
-    statusDownloadingSegments: "正在下载分片 {completed}/{total}",
-    statusMerging: "正在合并分片",
-    statusTransmuxing: "正在转封装为 MP4",
+    statusReadingCookies: "读取钉钉 Cookie",
+    statusResolving: "解析回放地址",
+    statusParsingM3u8: "解析 m3u8",
+    statusDownloadingSegments: "下载分片 {completed}/{total}",
+    statusMerging: "合并分片",
+    statusTransmuxing: "转封装 MP4",
     statusDone: "完成",
     statusFailed: "失败",
-    logSelectedVariant: "已选择清晰度列表：{url}",
-    logDownloadedSegments: "已下载 {completed}/{total} 个分片。",
-    logCollectedCookies: "已读取 {count} 个钉钉 Cookie。",
+    logSelectedVariant: "选择媒体列表：{url}",
+    logDownloadedSegments: "下载进度：{completed}/{total}",
+    logCollectedCookies: "读取 Cookie：{count} 个",
     logTitle: "标题：{title}",
-    logPlaybackSource: "回放地址来源：{source}",
+    logPlaybackSource: "地址来源：{source}",
     logPlaybackUrl: "回放地址：{url}",
-    logSegments: "分片数量：{count}",
+    logSegments: "分片：{count} 个",
     logEncrypted: "加密：{value}",
-    logMergedTsSize: "合并后的 TS 大小：{size}",
+    logMergedTsSize: "TS 大小：{size}",
     logMp4Failed: "MP4 转封装失败：{message}",
-    logSavingTs: "改为保存合并后的 TS。",
-    logSaved: "已保存 {filename}（{size}）。",
-    logCancelRequested: "已请求取消。",
+    logSavingTs: "改为保存 TS。",
+    logSaved: "保存完成：{filename}（{size}）",
+    logCancelRequested: "正在取消...",
     yes: "是",
     no: "否",
     errMissingParams: "回放链接中没有找到 roomId 和 liveUuid。",
@@ -71,72 +81,18 @@ const I18N = {
     errMuxUnavailable: "mux.js 不可用。",
     errMuxNoData: "mux.js 没有生成 MP4 数据。",
     errorPrefix: "错误：{message}"
-  },
-  en: {
-    pageTitle: "DingTalk Replay Downloader",
-    appTitle: "DingTalk Replay Downloader",
-    appSubtitle: "Local learning build for replay videos you can already access.",
-    language: "Language",
-    openTab: "Open Tab",
-    replayLink: "Replay link",
-    replayPlaceholder: "Paste a DingTalk replay link, or roomId=...&liveUuid=...",
-    output: "Output",
-    mp4Option: "MP4 via mux.js",
-    tsOption: "Merged TS",
-    concurrency: "Concurrency",
-    download: "Download",
-    cancel: "Cancel",
-    statusIdle: "Idle",
-    statusPreparing: "Preparing",
-    statusReadingCookies: "Reading DingTalk cookies",
-    statusResolving: "Resolving playback URL",
-    statusParsingM3u8: "Parsing m3u8",
-    statusDownloadingSegments: "Downloading segments {completed}/{total}",
-    statusMerging: "Merging segments",
-    statusTransmuxing: "Transmuxing to MP4",
-    statusDone: "Done",
-    statusFailed: "Failed",
-    logSelectedVariant: "Selected variant playlist: {url}",
-    logDownloadedSegments: "Downloaded {completed}/{total} segments.",
-    logCollectedCookies: "Collected {count} DingTalk cookies.",
-    logTitle: "Title: {title}",
-    logPlaybackSource: "Playback source: {source}",
-    logPlaybackUrl: "Playback URL: {url}",
-    logSegments: "Segments: {count}",
-    logEncrypted: "Encrypted: {value}",
-    logMergedTsSize: "Merged TS size: {size}",
-    logMp4Failed: "MP4 transmux failed: {message}",
-    logSavingTs: "Saving merged TS instead.",
-    logSaved: "Saved {filename} ({size}).",
-    logCancelRequested: "Cancel requested.",
-    yes: "yes",
-    no: "no",
-    errMissingParams: "Cannot find roomId and liveUuid in the replay link.",
-    errNotLoggedIn: "DingTalk says this browser session is not logged in. Open DingTalk in this browser and try again.",
-    errMissingModel: "DingTalk response did not include openLiveDetailModel.",
-    errReplayRestricted: "Replay exists, but no playback URL was returned. It may be unavailable or restricted.",
-    errEmptyPlayback: "Replay playback URL is empty. The live may not be finished, or replay may be disabled.",
-    errNotM3u8: "This does not look like an m3u8 playlist.",
-    errTooManyNestedM3u8: "Too many nested m3u8 playlists.",
-    errNoSegments: "No media segments found in m3u8.",
-    errAesKeyLength: "AES-128 key must be 16 bytes.",
-    errUnsupportedEncryption: "Unsupported HLS encryption method: {method}",
-    errNoCookies: "No DingTalk cookies found. Log in to DingTalk in this browser first.",
-    errCancelled: "Download cancelled.",
-    errMuxUnavailable: "mux.js is not available.",
-    errMuxNoData: "mux.js produced no MP4 data.",
-    errorPrefix: "Error: {message}"
   }
 };
 
 const els = {
-  languageSelect: document.getElementById("languageSelect"),
   replayUrl: document.getElementById("replayUrl"),
-  outputFormat: document.getElementById("outputFormat"),
+  outputOptions: Array.from(document.querySelectorAll('input[name="outputFormat"]')),
   concurrency: document.getElementById("concurrency"),
   startBtn: document.getElementById("startBtn"),
   cancelBtn: document.getElementById("cancelBtn"),
   openTabBtn: document.getElementById("openTabBtn"),
+  useCurrentTabBtn: document.getElementById("useCurrentTabBtn"),
+  clearBtn: document.getElementById("clearBtn"),
   statusText: document.getElementById("statusText"),
   progressText: document.getElementById("progressText"),
   progressBar: document.getElementById("progressBar"),
@@ -144,21 +100,19 @@ const els = {
 };
 
 let activeRun = null;
-let currentLanguage = localStorage.getItem("dingtalkReplayLocalLanguage") || "zh";
 let currentStatus = { key: "statusIdle", params: {}, percent: 0 };
 
 function t(key, params = {}) {
-  const table = I18N[currentLanguage] || I18N.zh;
-  const fallback = I18N.en[key] || I18N.zh[key] || key;
+  const table = I18N.zh;
+  const fallback = I18N.zh[key] || key;
   return String(table[key] || fallback).replace(/\{(\w+)\}/g, (match, name) => {
     return params[name] == null ? "" : String(params[name]);
   });
 }
 
 function applyLocale() {
-  document.documentElement.lang = currentLanguage === "zh" ? "zh-CN" : "en";
+  document.documentElement.lang = "zh-CN";
   document.title = t("pageTitle");
-  if (els.languageSelect) els.languageSelect.value = currentLanguage;
 
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     node.textContent = t(node.dataset.i18n);
@@ -166,6 +120,10 @@ function applyLocale() {
 
   document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
     node.placeholder = t(node.dataset.i18nPlaceholder);
+  });
+
+  document.querySelectorAll("[data-i18n-empty]").forEach((node) => {
+    node.dataset.empty = t(node.dataset.i18nEmpty);
   });
 
   els.statusText.textContent = t(currentStatus.key, currentStatus.params);
@@ -722,7 +680,7 @@ async function runDownload() {
   els.log.textContent = "";
   setStatus("statusPreparing", 0);
 
-  const outputFormat = els.outputFormat.value;
+  const outputFormat = document.querySelector('input[name="outputFormat"]:checked')?.value || "mp4";
   const concurrency = parseInt(els.concurrency.value, 10) || 4;
   const params = extractParamsFromUrl(els.replayUrl.value);
   log(`roomId=${params.roomId}`);
@@ -783,18 +741,24 @@ async function fillCurrentTabUrl() {
     const tab = tabs && tabs[0];
     if (tab && tab.url && /dingtalk\.com/i.test(tab.url)) {
       els.replayUrl.value = tab.url;
+      return true;
     }
   } catch (error) {
-    // The page still works when the user pastes the URL manually.
+    // 用户仍可手动粘贴链接。
   }
+  return false;
 }
 
 function setBusy(isBusy) {
   els.startBtn.disabled = isBusy;
   els.cancelBtn.disabled = !isBusy;
   els.replayUrl.disabled = isBusy;
-  els.outputFormat.disabled = isBusy;
+  els.outputOptions.forEach((input) => {
+    input.disabled = isBusy;
+  });
   els.concurrency.disabled = isBusy;
+  els.useCurrentTabBtn.disabled = isBusy;
+  els.clearBtn.disabled = isBusy;
 }
 
 els.startBtn.addEventListener("click", async () => {
@@ -816,15 +780,16 @@ els.cancelBtn.addEventListener("click", () => {
   log(t("logCancelRequested"));
 });
 
-els.languageSelect.addEventListener("change", () => {
-  currentLanguage = els.languageSelect.value === "en" ? "en" : "zh";
-  localStorage.setItem("dingtalkReplayLocalLanguage", currentLanguage);
-  applyLocale();
-});
-
 els.openTabBtn.addEventListener("click", async () => {
   const url = chrome.runtime.getURL("downloader.html");
   await chromeCall(chrome.tabs.create, { url });
+});
+
+els.useCurrentTabBtn.addEventListener("click", fillCurrentTabUrl);
+
+els.clearBtn.addEventListener("click", () => {
+  els.replayUrl.value = "";
+  els.replayUrl.focus();
 });
 
 applyLocale();

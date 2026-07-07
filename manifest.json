@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "DingTalk Replay Local Learning Downloader",
-  "version": "0.1.1",
-  "description": "Local-only learning extension for downloading DingTalk replay videos you are authorized to view.",
+  "name": "钉钉直播回放下载器",
+  "version": "0.2.0",
+  "description": "用于下载已授权钉钉直播回放的本地浏览器扩展。",
   "minimum_chrome_version": "111",
   "permissions": [
     "cookies",
@@ -14,7 +14,7 @@
     "<all_urls>"
   ],
   "action": {
-    "default_title": "DingTalk Replay Downloader",
+    "default_title": "钉钉直播回放下载器",
     "default_popup": "downloader.html"
   }
 }
