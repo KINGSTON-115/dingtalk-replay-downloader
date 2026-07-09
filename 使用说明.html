@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>钉钉直播回放下载器 - 使用说明</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --text: #111827;
+      --muted: #667085;
+      --line: #d8dee8;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --success: #0f766e;
+      --warning: #9a3412;
+      --shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.6 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .page {
+      width: min(920px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 48px;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--success);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 42px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .intro {
+      max-width: 680px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .notice {
+      margin-top: 18px;
+      border-left: 4px solid var(--warning);
+      border-radius: 7px;
+      background: #fff7ed;
+      padding: 12px 14px;
+      color: #7c2d12;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .section.full {
+      grid-column: 1 / -1;
+    }
+
+    h2 {
+      margin-bottom: 14px;
+      font-size: 20px;
+      line-height: 1.25;
+    }
+
+    ol {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    li::marker {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    code {
+      border: 1px solid #dbe4f0;
+      border-radius: 6px;
+      background: #f8fafc;
+      padding: 2px 6px;
+      font: 0.95em ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    .browser-links {
+      display: grid;
+      gap: 10px;
+    }
+
+    .browser-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #f8fafc;
+    }
+
+    .browser-name {
+      font-weight: 800;
+    }
+
+    .browser-url {
+      overflow-wrap: anywhere;
+      color: var(--muted);
+    }
+
+    button {
+      min-height: 34px;
+      border: 1px solid var(--accent);
+      border-radius: 7px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 760;
+      padding: 0 12px;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      background: var(--accent-strong);
+    }
+
+    .tip {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .checklist li {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+    }
+
+    .check {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: var(--success);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100% - 24px, 920px);
+        padding-top: 18px;
+      }
+
+      .hero,
+      .section {
+        padding: 18px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .browser-row {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">本地浏览器扩展</p>
+      <h1>钉钉直播回放下载器</h1>
+      <p class="intro">解压后安装到 Chrome 或 Edge，用当前浏览器已经登录的钉钉账号下载已授权回放。</p>
+      <p class="notice">请只下载你有权访问、保存和学习分析的回放。本工具不会绕过钉钉登录、访问权限或 DRM。</p>
+    </section>
+
+    <div class="grid">
+      <section class="section">
+        <h2>安装步骤</h2>
+        <ol>
+          <li>打开浏览器扩展管理页。</li>
+          <li>开启右上角的“开发者模式”。</li>
+          <li>把这个文件夹整个拖到扩展管理页。</li>
+          <li>如果拖拽没有反应，点击“加载解压缩的扩展”，选择这个包含 <code>manifest.json</code> 的文件夹。</li>
+        </ol>
+      </section>
+
+      <section class="section">
+        <h2>扩展管理页地址</h2>
+        <div class="browser-links">
+          <div class="browser-row">
+            <span class="browser-name">Chrome</span>
+            <code class="browser-url" id="chromeUrl">chrome://extensions</code>
+            <button type="button" data-copy="chromeUrl">复制</button>
+          </div>
+          <div class="browser-row">
+            <span class="browser-name">Edge</span>
+            <code class="browser-url" id="edgeUrl">edge://extensions</code>
+            <button type="button" data-copy="edgeUrl">复制</button>
+          </div>
+        </div>
+        <p class="tip">复制后粘贴到浏览器地址栏并回车即可打开。</p>
+      </section>
+
+      <section class="section full">
+        <h2>开始下载</h2>
+        <ul class="checklist">
+          <li><span class="check">✓</span><span>先在同一个浏览器里登录钉钉网页。</span></li>
+          <li><span class="check">✓</span><span>确认目标直播回放能正常播放。</span></li>
+          <li><span class="check">✓</span><span>打开扩展，粘贴回放链接，或在回放页点击“使用当前页”。</span></li>
+          <li><span class="check">✓</span><span>选择 MP4 或 TS，然后点击“开始下载回放”。</span></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    document.querySelectorAll("[data-copy]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copy);
+        const value = target ? target.textContent.trim() : "";
+        if (!value) return;
+
+        try {
+          await navigator.clipboard.writeText(value);
+          button.textContent = "已复制";
+        } catch (error) {
+          window.prompt("复制下面的地址", value);
+        }
+
+        window.setTimeout(() => {
+          button.textContent = "复制";
+        }, 1400);
+      });
+    });
+  </script>
+</body>
+</html>

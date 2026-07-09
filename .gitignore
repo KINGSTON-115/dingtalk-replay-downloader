@@ -15,5 +15,10 @@ Thumbs.db
 downloads/
 tmp/
 
+# Release packages
+dist/
+*.zip
+*.crx
+
 # Logs
 *.log

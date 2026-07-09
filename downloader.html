@@ -12,29 +12,29 @@
       <div class="brand">
         <div class="brand-mark" aria-hidden="true"></div>
         <div>
-          <p class="eyebrow" data-i18n="eyebrow">本地扩展</p>
+          <p class="eyebrow" data-i18n="eyebrow">本地工具</p>
           <h1 data-i18n="appTitle">钉钉直播回放</h1>
         </div>
       </div>
 
       <div class="header-actions">
-        <button id="openTabBtn" class="button secondary compact" type="button" data-i18n="openTab">独立页</button>
+        <button id="openTabBtn" class="button secondary compact" type="button" data-i18n="openTab">打开独立页</button>
       </div>
     </header>
 
     <div class="badges" aria-label="项目范围">
       <span data-i18n="localOnly">本地处理</span>
       <span data-i18n="authorizedOnly">已授权回放</span>
-      <span data-i18n="noServerAccount">无插件账号系统</span>
+      <span data-i18n="noServerAccount">无需插件账号</span>
     </div>
 
     <section class="panel source-panel">
       <div class="section-header">
         <div>
           <h2 data-i18n="sourceTitle">回放来源</h2>
-          <p data-i18n="sourceHint">粘贴回放链接，或直接输入 roomId 与 liveUuid。</p>
+          <p data-i18n="sourceHint">先打开能播放的回放，再粘贴链接或使用当前页。</p>
         </div>
-        <button id="useCurrentTabBtn" class="button secondary compact" type="button" data-i18n="useCurrentTab">当前页</button>
+        <button id="useCurrentTabBtn" class="button secondary compact" type="button" data-i18n="useCurrentTab">使用当前页</button>
       </div>
 
       <label class="field">
@@ -43,7 +43,7 @@
       </label>
 
       <div class="field-footer">
-        <span data-i18n="inputHint">支持钉钉回放链接或 roomId=...&liveUuid=...</span>
+        <span data-i18n="inputHint">支持完整链接，也支持 roomId=...&liveUuid=...</span>
         <button id="clearBtn" class="link-button" type="button" data-i18n="clear">清空</button>
       </div>
     </section>
@@ -71,14 +71,14 @@
         </fieldset>
 
         <label class="field concurrency-field">
-          <span data-i18n="concurrency">并发数</span>
+          <span data-i18n="concurrency">下载并发</span>
           <input id="concurrency" type="number" min="1" max="12" value="4" inputmode="numeric">
         </label>
       </div>
     </section>
 
     <div class="actionbar">
-      <button id="startBtn" class="button primary" type="button" data-i18n="download">开始下载</button>
+      <button id="startBtn" class="button primary" type="button" data-i18n="download">开始下载回放</button>
       <button id="cancelBtn" class="button danger" type="button" disabled data-i18n="cancel">取消任务</button>
     </div>
 
