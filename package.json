@@ -1,0 +1,27 @@
+{
+  "name": "local-learning-web-video-downloader",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "面向已授权非 DRM 内容的本地网页视频下载扩展。",
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "test:extension": "node scripts/test-extension.mjs",
+    "test:native": "node scripts/test-native-host.mjs",
+    "test:watch": "vitest",
+    "check": "npm run build && npm test && npm run test:extension && npm run test:native",
+    "package": "powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1"
+  },
+  "dependencies": {
+    "m3u8-parser": "7.2.0",
+    "mpd-parser": "1.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "playwright": "1.61.1",
+    "sharp": "0.35.3",
+    "vitest": "4.1.10"
+  }
+}

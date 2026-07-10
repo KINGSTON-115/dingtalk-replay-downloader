@@ -1,20 +1,45 @@
 {
   "manifest_version": 3,
-  "name": "钉钉直播回放下载器",
-  "version": "0.3.0",
-  "description": "用于下载已授权钉钉直播回放的本地浏览器扩展。",
+  "name": "网页视频下载器",
+  "version": "0.4.0",
+  "description": "识别并下载当前账号有权访问的非 DRM 网页视频，支持钉钉、HLS、DASH 和普通媒体文件。",
   "minimum_chrome_version": "111",
+  "incognito": "split",
   "permissions": [
-    "cookies",
+    "activeTab",
+    "declarativeNetRequestWithHostAccess",
     "downloads",
-    "tabs"
+    "scripting",
+    "storage"
+  ],
+  "optional_permissions": [
+    "cookies",
+    "nativeMessaging",
+    "webRequest"
   ],
   "host_permissions": [
-    "https://*.dingtalk.com/*",
-    "<all_urls>"
+    "https://*.dingtalk.com/*"
   ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "build/background/service-worker.js",
+    "type": "module"
+  },
   "action": {
-    "default_title": "钉钉直播回放下载器",
-    "default_popup": "downloader.html"
+    "default_title": "网页视频下载器",
+    "default_popup": "downloader.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   }
 }

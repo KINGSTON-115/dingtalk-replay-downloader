@@ -3,298 +3,132 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>钉钉直播回放下载器 - 使用说明</title>
+  <title>网页视频下载器 v0.4.0 使用说明</title>
   <style>
-    :root {
-      color-scheme: light;
-      --bg: #f4f6f8;
-      --surface: #ffffff;
-      --text: #111827;
-      --muted: #667085;
-      --line: #d8dee8;
-      --accent: #2563eb;
-      --accent-strong: #1d4ed8;
-      --success: #0f766e;
-      --warning: #9a3412;
-      --shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 15px/1.6 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    .page {
-      width: min(920px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 36px 0 48px;
-    }
-
-    .hero {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      padding: 28px;
-    }
-
-    .eyebrow {
-      margin: 0 0 8px;
-      color: var(--success);
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    h1,
-    h2,
-    p {
-      margin: 0;
-    }
-
-    h1 {
-      font-size: 42px;
-      line-height: 1.12;
-      letter-spacing: 0;
-    }
-
-    .intro {
-      max-width: 680px;
-      margin-top: 12px;
-      color: var(--muted);
-      font-size: 17px;
-    }
-
-    .notice {
-      margin-top: 18px;
-      border-left: 4px solid var(--warning);
-      border-radius: 7px;
-      background: #fff7ed;
-      padding: 12px 14px;
-      color: #7c2d12;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-      margin-top: 18px;
-    }
-
-    .section {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      padding: 22px;
-    }
-
-    .section.full {
-      grid-column: 1 / -1;
-    }
-
-    h2 {
-      margin-bottom: 14px;
-      font-size: 20px;
-      line-height: 1.25;
-    }
-
-    ol {
-      display: grid;
-      gap: 12px;
-      margin: 0;
-      padding-left: 22px;
-    }
-
-    li::marker {
-      color: var(--accent);
-      font-weight: 800;
-    }
-
-    code {
-      border: 1px solid #dbe4f0;
-      border-radius: 6px;
-      background: #f8fafc;
-      padding: 2px 6px;
-      font: 0.95em ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-    }
-
-    .browser-links {
-      display: grid;
-      gap: 10px;
-    }
-
-    .browser-row {
-      display: grid;
-      grid-template-columns: 92px minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px;
-      background: #f8fafc;
-    }
-
-    .browser-name {
-      font-weight: 800;
-    }
-
-    .browser-url {
-      overflow-wrap: anywhere;
-      color: var(--muted);
-    }
-
-    button {
-      min-height: 34px;
-      border: 1px solid var(--accent);
-      border-radius: 7px;
-      background: var(--accent);
-      color: #fff;
-      cursor: pointer;
-      font: inherit;
-      font-size: 13px;
-      font-weight: 760;
-      padding: 0 12px;
-      white-space: nowrap;
-    }
-
-    button:hover {
-      background: var(--accent-strong);
-    }
-
-    .tip {
-      margin-top: 12px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .checklist {
-      display: grid;
-      gap: 10px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .checklist li {
-      display: flex;
-      gap: 9px;
-      align-items: flex-start;
-    }
-
-    .check {
-      width: 20px;
-      height: 20px;
-      flex: 0 0 20px;
-      border-radius: 999px;
-      background: #ecfdf5;
-      color: var(--success);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 900;
-    }
-
-    @media (max-width: 720px) {
-      .page {
-        width: min(100% - 24px, 920px);
-        padding-top: 18px;
-      }
-
-      .hero,
-      .section {
-        padding: 18px;
-      }
-
-      h1 {
-        font-size: 30px;
-      }
-
-      .grid {
-        grid-template-columns: 1fr;
-      }
-
-      .browser-row {
-        grid-template-columns: 1fr;
-        align-items: stretch;
-      }
-    }
+    :root { font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; color: #172033; background: #eef2f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: radial-gradient(circle at 15% 0, #dbe8ff, transparent 34%), #eef2f8; }
+    main { width: min(920px, calc(100% - 28px)); margin: 28px auto 60px; }
+    header, section { margin-bottom: 16px; padding: 22px; border: 1px solid #d5dfed; border-radius: 17px; background: rgba(255,255,255,.96); box-shadow: 0 14px 38px rgba(30,45,75,.09); }
+    header { display: flex; align-items: center; gap: 16px; }
+    header img { width: 64px; height: 64px; border-radius: 15px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 6px; font-size: 27px; }
+    h2 { margin-bottom: 14px; font-size: 19px; }
+    h3 { margin: 18px 0 8px; font-size: 15px; }
+    p, li { color: #4d5b70; line-height: 1.75; }
+    ol, ul { padding-left: 24px; }
+    code { padding: 2px 5px; border-radius: 5px; background: #eef3fb; color: #1749b8; }
+    pre { overflow: auto; padding: 14px; border-radius: 10px; color: #dbe7fb; background: #111a2a; line-height: 1.55; }
+    .lead { margin: 0; color: #637087; }
+    .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+    .tags span { padding: 5px 9px; border: 1px solid #cbd8ed; border-radius: 999px; color: #355783; background: #edf4ff; font-size: 12px; font-weight: 700; }
+    .notice { padding: 12px 14px; border: 1px solid #efd39e; border-radius: 10px; color: #70460d; background: #fff8e8; line-height: 1.65; }
+    .success { border-color: #bce3d2; color: #176344; background: #eefaf5; }
+    .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; padding: 0; list-style: none; counter-reset: step; }
+    .steps li { position: relative; padding: 45px 14px 14px; border: 1px solid #dce4f0; border-radius: 11px; background: #fafcff; }
+    .steps li::before { counter-increment: step; content: counter(step); position: absolute; top: 12px; left: 14px; display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: white; background: #2463eb; font-weight: 800; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 10px; border-bottom: 1px solid #e1e7f0; text-align: left; vertical-align: top; }
+    th { color: #34435b; background: #f6f8fc; }
+    a { color: #205bd4; }
+    @media (max-width: 700px) { header { align-items: flex-start; } .steps { grid-template-columns: 1fr; } section, header { padding: 17px; } }
   </style>
 </head>
 <body>
-  <main class="page">
-    <section class="hero">
-      <p class="eyebrow">本地浏览器扩展</p>
-      <h1>钉钉直播回放下载器</h1>
-      <p class="intro">解压后安装到 Chrome 或 Edge，用当前浏览器已经登录的钉钉账号下载已授权回放。</p>
-      <p class="notice">请只下载你有权访问、保存和学习分析的回放。本工具不会绕过钉钉登录、访问权限或 DRM。</p>
-    </section>
-
-    <div class="grid">
-      <section class="section">
-        <h2>安装步骤</h2>
-        <ol>
-          <li>打开浏览器扩展管理页。</li>
-          <li>开启右上角的“开发者模式”。</li>
-          <li>把这个文件夹整个拖到扩展管理页。</li>
-          <li>如果拖拽没有反应，点击“加载解压缩的扩展”，选择这个包含 <code>manifest.json</code> 的文件夹。</li>
-        </ol>
-      </section>
-
-      <section class="section">
-        <h2>扩展管理页地址</h2>
-        <div class="browser-links">
-          <div class="browser-row">
-            <span class="browser-name">Chrome</span>
-            <code class="browser-url" id="chromeUrl">chrome://extensions</code>
-            <button type="button" data-copy="chromeUrl">复制</button>
-          </div>
-          <div class="browser-row">
-            <span class="browser-name">Edge</span>
-            <code class="browser-url" id="edgeUrl">edge://extensions</code>
-            <button type="button" data-copy="edgeUrl">复制</button>
-          </div>
-        </div>
-        <p class="tip">复制后粘贴到浏览器地址栏并回车即可打开。</p>
-      </section>
-
-      <section class="section full">
-        <h2>开始下载</h2>
-        <ul class="checklist">
-          <li><span class="check">✓</span><span>先在同一个浏览器里登录钉钉网页。</span></li>
-          <li><span class="check">✓</span><span>确认目标直播回放能正常播放。</span></li>
-          <li><span class="check">✓</span><span>打开扩展，粘贴回放链接，或在回放页点击“使用当前页”。</span></li>
-          <li><span class="check">✓</span><span>选择 MP4 或 TS，然后点击“开始下载回放”。</span></li>
-        </ul>
-      </section>
+<main>
+  <header>
+    <img src="icons/icon-128.png" alt="网页视频下载器图标">
+    <div>
+      <h1>网页视频下载器 v0.4.0</h1>
+      <p class="lead">钉钉只是内置适配器之一；同时支持普通媒体、HLS 和 DASH。</p>
+      <div class="tags"><span>本地处理</span><span>流式写盘</span><span>非 DRM</span><span>按需权限</span></div>
     </div>
-  </main>
+  </header>
 
-  <script>
-    document.querySelectorAll("[data-copy]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const target = document.getElementById(button.dataset.copy);
-        const value = target ? target.textContent.trim() : "";
-        if (!value) return;
+  <section>
+    <h2>一、安装扩展</h2>
+    <ol class="steps">
+      <li>确认当前文件夹中直接包含 <code>manifest.json</code>，不要继续选择它的上级目录。</li>
+      <li>打开 <code>chrome://extensions</code> 或 <code>edge://extensions</code>，开启“开发者模式”。</li>
+      <li>点击“加载已解压的扩展程序”，选择当前文件夹。浏览器工具栏会出现蓝色下载图标。</li>
+    </ol>
+    <p class="notice">如果你下载的是 GitHub 自动生成的 Source code，需要先运行构建；普通用户应下载 Releases 中的 <code>web-video-downloader-v*.zip</code>。</p>
+  </section>
 
-        try {
-          await navigator.clipboard.writeText(value);
-          button.textContent = "已复制";
-        } catch (error) {
-          window.prompt("复制下面的地址", value);
-        }
+  <section>
+    <h2>二、最常用流程</h2>
+    <ol>
+      <li>在同一个浏览器中登录目标网站，确认目标视频能正常播放。</li>
+      <li>播放视频几秒钟，然后点击扩展图标和“识别当前页”。</li>
+      <li>在候选列表中选择 HLS、DASH 或视频文件，点击“解析媒体信息”。</li>
+      <li>选择清晰度、音轨、浏览器模式或 FFmpeg 本地增强模式。</li>
+      <li>点击“前往任务页下载”。在独立任务页确认保存位置并开始。</li>
+    </ol>
+    <p class="success notice">下载任务不再运行在容易关闭的弹窗中。弹窗可以关闭，但下载期间请保留独立任务页。</p>
+  </section>
 
-        window.setTimeout(() => {
-          button.textContent = "复制";
-        }, 1400);
-      });
-    });
-  </script>
+  <section>
+    <h2>三、识别模式</h2>
+    <h3>基础识别</h3>
+    <p>只在你点击按钮时读取当前标签页中的媒体元素、页面元数据和已经加载的资源。它依赖 <code>activeTab</code> 临时权限，不需要默认访问所有网站。</p>
+    <h3>增强识别</h3>
+    <p>点击“增强识别”后，浏览器会询问全站 HTTP/HTTPS 权限。授权后，扩展从页面加载开始记录媒体响应类型、Fetch、XHR 与 MSE 信号，适合没有文件后缀、使用 <code>blob:</code> 播放或很快过期的媒体。</p>
+    <p>增强识别不会读取 Fetch/XHR 响应正文，也不会复制 SourceBuffer 数据。权限可在浏览器扩展设置中撤销。</p>
+  </section>
+
+  <section>
+    <h2>四、格式与输出</h2>
+    <table>
+      <thead><tr><th>媒体</th><th>浏览器模式</th><th>本地增强模式</th></tr></thead>
+      <tbody>
+        <tr><td>普通 MP4/WebM/MOV 等</td><td>浏览器原生下载</td><td>FFmpeg 复制封装</td></tr>
+        <tr><td>HLS TS</td><td>保存 TS 或逐分片转 MP4</td><td>合并为 MP4/MKV</td></tr>
+        <tr><td>HLS fMP4</td><td>流式写入 MP4</td><td>合并为 MP4/MKV</td></tr>
+        <tr><td>独立音视频轨</td><td>选择目录，保存为 video/audio 两个文件</td><td>自动合并单文件</td></tr>
+        <tr><td>HLS 直播</td><td>持续录制，点击“停止并保存”</td><td>支持</td></tr>
+        <tr><td>DASH SIDX/动态 MPD</td><td>不支持</td><td>支持</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="native">
+    <h2>五、安装 FFmpeg 本地增强</h2>
+    <p>先安装 Node.js 和 FFmpeg，并在 PowerShell 中确认 <code>node --version</code>、<code>ffmpeg -version</code> 能正常运行。</p>
+    <ol>
+      <li>在扩展管理页复制本扩展的 32 位 ID。</li>
+      <li>打开发布包的 <code>native-host</code> 文件夹。</li>
+      <li>运行：</li>
+    </ol>
+    <pre>powershell -ExecutionPolicy Bypass -File install.ps1 -ExtensionId 你的扩展ID</pre>
+    <p>默认输出到“下载/网页视频下载器”。卸载命令：</p>
+    <pre>powershell -ExecutionPolicy Bypass -File uninstall.ps1</pre>
+    <p class="notice">本地增强和 Cookie 都是单独的可选权限。只有某个媒体在 FFmpeg 中确实提示未授权时，才建议勾选“提供当前媒体域的 Cookie”。</p>
+  </section>
+
+  <section>
+    <h2>六、常见问题</h2>
+    <h3>只看见 blob 地址</h3>
+    <p>点击“增强识别”，刷新页面，再开始播放。扩展要寻找的是 blob 背后的 HLS、DASH 或媒体分片。</p>
+    <h3>解析成功但浏览器模式得到两个文件</h3>
+    <p>网站使用了独立视频轨和音频轨。使用 FFmpeg 本地增强可合并；也可以保留两个轨道文件自行处理。</p>
+    <h3>提示 DRM 或 ContentProtection</h3>
+    <p>这表示媒体由 Widevine、PlayReady、FairPlay、SAMPLE-AES 等机制保护。本扩展不会绕过 DRM。</p>
+    <h3>403、401 或地址过期</h3>
+    <p>确认页面仍能播放，重新识别以获取新地址，并授权实际 CDN 域名。不要在日志或截图中公开带签名的完整 URL。</p>
+    <h3>下载过程中关掉了任务页</h3>
+    <p>浏览器会结束页面内任务。重新打开扩展并开始新任务；普通文件由浏览器下载器接管后不受任务页影响。</p>
+  </section>
+
+  <section>
+    <h2>七、安全与合规</h2>
+    <ul>
+      <li>只下载你有权访问、保存和备份的内容。</li>
+      <li>扩展不会绕过登录、访问控制、付费限制或 DRM。</li>
+      <li>任务历史保存的是脱敏地址；媒体候选保存在浏览器 session storage 中。</li>
+      <li>默认安装没有全站 Cookie 读取能力。</li>
+    </ul>
+  </section>
+</main>
 </body>
 </html>

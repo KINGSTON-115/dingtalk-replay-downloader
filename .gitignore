@@ -5,6 +5,12 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+node_modules/
+build/
+coverage/
+.tmp-*/
+test-results/
+chrome-extension-test.log
 
 # Downloaded media and temporary files
 *.mp4
@@ -14,6 +20,13 @@ Thumbs.db
 *.part
 downloads/
 tmp/
+
+# Versioned protocol fixtures
+!tests/fixtures/**
+
+# Source module, not downloaded media
+!src/downloads/
+!src/downloads/**
 
 # Release packages
 dist/
