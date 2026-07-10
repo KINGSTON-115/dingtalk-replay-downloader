@@ -107,7 +107,9 @@ function collectPlaybackUrls(value, path = "model", output = [], depth = 0) {
 }
 
 export function parseDingtalkResponse(body, params) {
-  if (body?.isLogined === false) throw new Error("钉钉返回当前浏览器未登录，请先在同一浏览器登录并确认回放可播放。");
+  if (body?.isLogined === false) {
+    throw new Error("钉钉接口返回“未登录”（页面账号可能仍已登录）。请保持可正常播放的回放标签页打开，从该页点击插件后重新识别。");
+  }
   const model = body?.openLiveDetailModel || body?.data?.openLiveDetailModel || body?.result?.openLiveDetailModel || body?.openLiveModel || body?.data || body?.result;
   if (!model || typeof model !== "object") throw new Error("钉钉响应中没有可识别的回放信息。");
 
@@ -154,11 +156,22 @@ export async function resolveDingtalkReplay(rawInput, options = {}) {
   const url = new URL(API_URL);
   url.searchParams.set("roomId", params.roomId);
   url.searchParams.set("liveUuid", params.liveUuid);
-  const resource = await fetchTextResource(url.href, {
+  const requestOptions = {
     ...options.http,
     signal: options.signal,
     headers: { Accept: "application/json, text/plain, */*", ...options.http?.headers }
-  });
+  };
+  let resource = null;
+  if (typeof options.pageFetchText === "function") {
+    try {
+      resource = await options.pageFetchText(url.href, { ...requestOptions, pageUrl: params.input });
+      options.onLog?.("已通过当前钉钉回放标签页复用登录会话。");
+    } catch (error) {
+      if (options.signal?.aborted) throw options.signal.reason || error;
+      options.onLog?.(`无法复用钉钉页面会话，改用扩展请求：${error.message}`);
+    }
+  }
+  resource ||= await fetchTextResource(url.href, requestOptions);
   const replay = parseDingtalkResponse(parseJsonLoose(resource.text), params);
   const selected = replay.playbackCandidates[0];
   return {

@@ -1,5 +1,5 @@
-import { matchesDingtalkReplay } from "../adapters/dingtalk.js";
-import { getActiveTab, injectDiscovery, requestOrigins, sendRuntimeMessage } from "../core/chrome.js";
+import { extractDingtalkParams, matchesDingtalkReplay } from "../adapters/dingtalk.js";
+import { fetchTextFromTab, getActiveTab, injectDiscovery, requestOrigins, sendRuntimeMessage } from "../core/chrome.js";
 import { candidateLabel, classifyMedia, formatBytes, mergeCandidates, normalizeCandidate } from "../core/media.js";
 import { analyzeResolvedSource, resolveInput } from "../core/resolver.js";
 import { collectAnalysisOrigins, installRequestContext } from "../core/request-context.js";
@@ -63,6 +63,12 @@ function setStatus(text, percent = null, tone = "normal") {
     els.progressText.textContent = `${Math.round(safe)}%`;
     els.progressBar.style.width = `${safe}%`;
   }
+}
+
+function reportAnalysisError(error, failureText = "解析失败") {
+  const waitingForPermission = state.pendingOrigins.length > 0;
+  setStatus(waitingForPermission ? "等待媒体域名授权" : failureText, 0, waitingForPermission ? "normal" : "error");
+  log(`${waitingForPermission ? "提示" : "错误"}：${error.message}`);
 }
 
 function resetProgress() {
@@ -174,6 +180,37 @@ async function targetTab() {
   return tab;
 }
 
+function isDingtalkPageUrl(value) {
+  try {
+    return /(?:^|\.)dingtalk\.com$/i.test(new URL(value).hostname);
+  } catch {
+    return false;
+  }
+}
+
+async function findDingtalkSourceTab(preferredPageUrl = "") {
+  const current = await targetTab();
+  const preferred = extractDingtalkParams(preferredPageUrl);
+  const matchesPreferredReplay = (tab) => {
+    const candidate = extractDingtalkParams(tab.url || "");
+    return preferred.roomId && preferred.liveUuid && candidate.roomId === preferred.roomId && candidate.liveUuid === preferred.liveUuid;
+  };
+  if (current?.id && isDingtalkPageUrl(current.url) && matchesPreferredReplay(current)) return current;
+  const tabs = await chrome.tabs.query({ url: ["https://*.dingtalk.com/*", "https://dingtalk.com/*"] }).catch(() => []);
+  const exact = tabs.find(matchesPreferredReplay);
+  const selected = exact || (current?.id && isDingtalkPageUrl(current.url) ? current : null) || tabs.find((tab) => isDingtalkPageUrl(tab.url));
+  if (selected) state.targetTab = selected;
+  return selected || null;
+}
+
+async function fetchTextFromSourceTab(url, options = {}) {
+  const tab = await findDingtalkSourceTab(options.pageUrl);
+  if (!tab?.id) {
+    throw new Error("没有可复用登录态的钉钉回放标签页。");
+  }
+  return fetchTextFromTab(tab.id, url, options);
+}
+
 async function collectCurrentPage({ inject = true } = {}) {
   const tab = await targetTab();
   if (!tab?.id || !/^https?:\/\//i.test(tab.url || "")) throw new Error("当前没有可识别的网页标签页。");
@@ -214,21 +251,13 @@ async function collectCurrentPage({ inject = true } = {}) {
   setStatus("识别完成", 0, "success");
 }
 
-async function ensureOriginPermission(url, interactive = true) {
+async function ensureOriginPermission(url) {
   if (!/^https?:\/\//i.test(url || "")) return true;
   const pattern = originPattern(url);
   if (await chrome.permissions.contains({ origins: [pattern] })) return true;
-  if (!interactive) {
-    state.pendingOrigins = [pattern];
-    els.grantOriginBtn.classList.remove("hidden");
-    return false;
-  }
-  const granted = await requestOrigins([pattern]);
-  if (!granted) {
-    state.pendingOrigins = [pattern];
-    els.grantOriginBtn.classList.remove("hidden");
-  }
-  return granted;
+  state.pendingOrigins = [pattern];
+  els.grantOriginBtn.classList.remove("hidden");
+  return false;
 }
 
 function formatDuration(seconds) {
@@ -307,14 +336,14 @@ function renderAnalysis(analysis) {
   log(`媒体解析完成：${analysis.protocol.toUpperCase()}，${variants.length || 1} 个视频选项。`);
 }
 
-async function analyzeCurrent({ interactivePermissions = true } = {}) {
+async function analyzeCurrent() {
   const input = normalizeUserInput(els.sourceInput.value);
   if (!input) throw new Error("请先输入地址或识别当前页。");
   clearAnalysis();
   setStatus("正在解析媒体", 8, "running");
   const candidate = currentCandidate();
   if (/^https?:\/\//i.test(input) && !matchesDingtalkReplay(input)) {
-    if (!(await ensureOriginPermission(input, interactivePermissions))) throw new Error("需要先授权该媒体域名。");
+    if (!(await ensureOriginPermission(input))) throw new Error("需要先授权该媒体域名。");
   }
 
   const controller = new AbortController();
@@ -324,6 +353,8 @@ async function analyzeCurrent({ interactivePermissions = true } = {}) {
     variantId: els.qualitySelect.value || state.requestedSelections.qualityId || "",
     audioTrackId: els.audioSelect.value || state.requestedSelections.audioTrackId || "",
     subtitleTrackId: els.subtitleSelect.value || state.requestedSelections.subtitleTrackId || "",
+    pageFetchText: fetchTextFromSourceTab,
+    onLog: log,
     async ensureUrls(urls) {
       const origins = Array.from(new Set((urls || []).filter((url) => /^https?:\/\//i.test(url)).map(originPattern)));
       if (!origins.length || await chrome.permissions.contains({ origins })) return;
@@ -338,20 +369,22 @@ async function analyzeCurrent({ interactivePermissions = true } = {}) {
     }
   };
   const resolved = await resolveInput(input, common);
-  if (!(await ensureOriginPermission(resolved.playbackUrl, interactivePermissions))) throw new Error("需要授权实际媒体所在的 CDN 域名。");
+  if (!(await ensureOriginPermission(resolved.playbackUrl))) throw new Error("需要授权实际媒体所在的 CDN 域名。");
   state.analysis = await analyzeResolvedSource(resolved, common);
   renderAnalysis(state.analysis);
   const allOrigins = collectAnalysisOrigins(state.analysis);
+  let waitingForAdditionalOrigins = false;
   if (allOrigins.length && !(await chrome.permissions.contains({ origins: allOrigins }))) {
     state.pendingOrigins = allOrigins;
     els.grantOriginBtn.classList.remove("hidden");
+    waitingForAdditionalOrigins = true;
     log(`该媒体还需要授权 ${allOrigins.length} 个清单/分片域名。`);
   } else {
     state.pendingOrigins = [];
     els.grantOriginBtn.classList.add("hidden");
   }
   state.requestedSelections = {};
-  setStatus("媒体解析完成", 0, "success");
+  setStatus(waitingForAdditionalOrigins ? "等待媒体域名授权" : "媒体解析完成", 0, waitingForAdditionalOrigins ? "normal" : "success");
   return state.analysis;
 }
 
@@ -506,8 +539,9 @@ async function enableEnhanced() {
 }
 
 async function updateNativeStatus(interactive = false) {
-  let permitted = await chrome.permissions.contains({ permissions: ["nativeMessaging"] });
-  if (!permitted && interactive) permitted = await chrome.permissions.request({ permissions: ["nativeMessaging"] });
+  const permitted = interactive
+    ? await chrome.permissions.request({ permissions: ["nativeMessaging"] })
+    : await chrome.permissions.contains({ permissions: ["nativeMessaging"] });
   if (!permitted) {
     state.nativeAvailable = false;
     els.nativeStatus.textContent = "本地增强尚未授权。选择该模式时会单独请求 Native Messaging 权限。";
@@ -564,7 +598,7 @@ async function initialize() {
         void updateNativeStatus(false);
       }
       if (draft.input) {
-        await analyzeCurrent({ interactivePermissions: false }).catch((error) => log(`等待确认：${error.message}`));
+        await analyzeCurrent().catch((error) => reportAnalysisError(error));
       }
     }
   } else {
@@ -588,20 +622,20 @@ els.sourceInput.addEventListener("input", () => {
   clearAnalysis();
 });
 els.analyzeBtn.addEventListener("click", () => analyzeCurrent().catch((error) => {
-  setStatus("解析失败", 0, "error");
-  log(`错误：${error.message}`);
+  reportAnalysisError(error);
 }));
-els.qualitySelect.addEventListener("change", () => analyzeCurrent().catch((error) => log(`重新解析失败：${error.message}`)));
-els.audioSelect.addEventListener("change", () => analyzeCurrent().catch((error) => log(`重新解析失败：${error.message}`)));
-els.subtitleSelect.addEventListener("change", () => analyzeCurrent().catch((error) => log(`重新解析失败：${error.message}`)));
+els.qualitySelect.addEventListener("change", () => analyzeCurrent().catch((error) => reportAnalysisError(error, "重新解析失败")));
+els.audioSelect.addEventListener("change", () => analyzeCurrent().catch((error) => reportAnalysisError(error, "重新解析失败")));
+els.subtitleSelect.addEventListener("change", () => analyzeCurrent().catch((error) => reportAnalysisError(error, "重新解析失败")));
 els.grantOriginBtn.addEventListener("click", async () => {
   try {
     const granted = await requestOrigins(state.pendingOrigins);
     if (!granted) throw new Error("媒体域名授权被拒绝。");
     state.pendingOrigins = [];
     els.grantOriginBtn.classList.add("hidden");
-    await analyzeCurrent({ interactivePermissions: false });
+    await analyzeCurrent();
   } catch (error) {
+    setStatus("媒体域名授权失败", 0, "error");
     log(`错误：${error.message}`);
   }
 });

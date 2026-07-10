@@ -109,11 +109,64 @@ async function testUiBundle() {
   try {
     browser = await chromium.launch({ executablePath, headless: true });
     const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+    const corsHeaders = {
+      "access-control-allow-origin": baseUrl,
+      "access-control-allow-credentials": "true",
+      "cache-control": "no-store"
+    };
+    const hlsFixtureRoot = resolve(root, "tests/fixtures/hls");
+    let dingtalkApiRequests = 0;
+    await page.route("https://lv.dingtalk.com/getOpenLiveInfo*", async (route) => {
+      dingtalkApiRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json; charset=utf-8",
+        headers: corsHeaders,
+        body: JSON.stringify({ isLogined: false })
+      });
+    });
+    await page.route(/^https:\/\/cdn\.example\.test\/hls\//, async (route) => {
+      const pathname = decodeURIComponent(new URL(route.request().url()).pathname);
+      const relativePath = pathname.replace(/^\/hls\//, "");
+      const file = resolve(hlsFixtureRoot, relativePath);
+      if (file === hlsFixtureRoot || !file.startsWith(`${hlsFixtureRoot}${sep}`) || !existsSync(file)) {
+        await route.fulfill({ status: 404, body: "not found", headers: corsHeaders });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/vnd.apple.mpegurl; charset=utf-8",
+        headers: corsHeaders,
+        body: readFileSync(file)
+      });
+    });
     await page.addInitScript(({ baseUrl, manifest }) => {
       const noopEvent = () => ({ addListener() {}, removeListener() {} });
-      const storage = {};
+      const dingtalkTab = {
+        id: 77,
+        title: "DingTalk permission fixture",
+        url: "https://n.dingtalk.com/dingding/live-room/index.html?roomId=room-fixture&liveUuid=live-fixture"
+      };
+      const storage = { "vwd.draft": { tabId: dingtalkTab.id, input: "" } };
       const grantedOrigins = new Set();
       const grantedPermissions = new Set();
+      globalThis.__dingtalkPageFetches = 0;
+      let directUserGesture = false;
+      const originalAddEventListener = EventTarget.prototype.addEventListener;
+      EventTarget.prototype.addEventListener = function addEventListenerWithGesture(type, listener, options) {
+        if (!["click", "change"].includes(type) || typeof listener !== "function") {
+          return originalAddEventListener.call(this, type, listener, options);
+        }
+        return originalAddEventListener.call(this, type, function gestureListener(event) {
+          const previousGesture = directUserGesture;
+          directUserGesture = true;
+          try {
+            return listener.call(this, event);
+          } finally {
+            directUserGesture = previousGesture;
+          }
+        }, options);
+      };
       const getStorage = async (keys) => {
         if (keys == null) return { ...storage };
         if (typeof keys === "string") return { [keys]: storage[keys] };
@@ -139,19 +192,45 @@ async function testUiBundle() {
         },
         tabs: {
           query: async () => [],
-          get: async () => { throw new Error("tab absent"); },
+          get: async (tabId) => {
+            if (tabId === dingtalkTab.id) return dingtalkTab;
+            throw new Error("tab absent");
+          },
           create: async () => ({}),
           sendMessage: async () => ({ ok: true, candidates: [] })
         },
         permissions: {
           contains: async (request = {}) => (request.origins || []).every((origin) => grantedOrigins.has(origin)) && (request.permissions || []).every((permission) => grantedPermissions.has(permission)),
           request: async (request = {}) => {
+            if (!directUserGesture) throw new Error("This function must be called during a user gesture");
             (request.origins || []).forEach((origin) => grantedOrigins.add(origin));
             (request.permissions || []).forEach((permission) => grantedPermissions.add(permission));
             return true;
           }
         },
-        scripting: { executeScript: async () => [] },
+        scripting: {
+          executeScript: async (details = {}) => {
+            if (typeof details.func !== "function") return [];
+            globalThis.__dingtalkPageFetches += 1;
+            return [{
+              frameId: 0,
+              result: {
+                ok: true,
+                status: 200,
+                url: details.args[0],
+                mime: "application/json; charset=utf-8",
+                text: JSON.stringify({
+                  isLogined: true,
+                  openLiveDetailModel: {
+                    title: "DingTalk permission fixture",
+                    playbackDuration: 30,
+                    playbackUrl: "https://cdn.example.test/hls/master.m3u8"
+                  }
+                })
+              }
+            }];
+          }
+        },
         downloads: {
           download: async () => 1,
           cancel: async () => {},
@@ -185,7 +264,26 @@ async function testUiBundle() {
     await page.selectOption("#engineSelect", "browser");
     await page.fill("#sourceInput", `${baseUrl}/tests/fixtures/hls/master.m3u8`);
     await page.click("#analyzeBtn");
-    await page.waitForSelector("#analysisPanel:not(.hidden)", { timeout: 10000 });
+    await page.waitForSelector("#grantOriginBtn:not(.hidden)", { timeout: 10000 });
+    const beforeDirectGrant = await page.evaluate(() => ({
+      analysisVisible: !document.querySelector("#analysisPanel")?.classList.contains("hidden"),
+      grantVisible: !document.querySelector("#grantOriginBtn")?.classList.contains("hidden"),
+      status: document.querySelector("#statusText")?.textContent
+    }));
+    if (beforeDirectGrant.analysisVisible || !beforeDirectGrant.grantVisible || beforeDirectGrant.status !== "等待媒体域名授权") {
+      throw new Error(`Direct media permission was not staged for an explicit click: ${JSON.stringify(beforeDirectGrant)}`);
+    }
+    await page.click("#grantOriginBtn");
+    try {
+      await page.waitForSelector("#analysisPanel:not(.hidden)", { timeout: 10000 });
+    } catch (error) {
+      const diagnostic = await page.evaluate(() => ({
+        grantVisible: !document.querySelector("#grantOriginBtn")?.classList.contains("hidden"),
+        status: document.querySelector("#statusText")?.textContent,
+        log: document.querySelector("#log")?.textContent
+      }));
+      throw new Error(`Direct media analysis did not resume after permission grant: ${JSON.stringify({ diagnostic, runtimeErrors, cause: error.message })}`);
+    }
     const analysis = await page.evaluate(() => ({
       protocol: document.querySelector("#protocolBadge")?.textContent,
       qualities: document.querySelector("#qualitySelect")?.options.length,
@@ -198,6 +296,30 @@ async function testUiBundle() {
       throw new Error(`HLS UI 解析异常：${JSON.stringify(analysis)}`);
     }
     if (!analysis.warning.includes("独立音视频轨")) throw new Error(`HLS 独立音轨提示缺失：${JSON.stringify(analysis)}`);
+
+    await page.fill("#sourceInput", "https://n.dingtalk.com/dingding/live-room/index.html?roomId=room-fixture&liveUuid=live-fixture");
+    await page.click("#analyzeBtn");
+    await page.waitForSelector("#grantOriginBtn:not(.hidden)", { timeout: 10000 });
+    const beforeDingtalkGrant = await page.evaluate(() => ({
+      analysisVisible: !document.querySelector("#analysisPanel")?.classList.contains("hidden"),
+      grantVisible: !document.querySelector("#grantOriginBtn")?.classList.contains("hidden"),
+      status: document.querySelector("#statusText")?.textContent,
+      pageFetches: globalThis.__dingtalkPageFetches
+    }));
+    if (beforeDingtalkGrant.analysisVisible || !beforeDingtalkGrant.grantVisible || beforeDingtalkGrant.status !== "等待媒体域名授权" || beforeDingtalkGrant.pageFetches !== 1 || dingtalkApiRequests !== 0) {
+      throw new Error(`DingTalk CDN permission was not staged after resolving playback: ${JSON.stringify({ ...beforeDingtalkGrant, dingtalkApiRequests })}`);
+    }
+    await page.click("#grantOriginBtn");
+    await page.waitForSelector("#analysisPanel:not(.hidden)", { timeout: 10000 });
+    const dingtalkAnalysis = await page.evaluate(() => ({
+      protocol: document.querySelector("#protocolBadge")?.textContent,
+      grantVisible: !document.querySelector("#grantOriginBtn")?.classList.contains("hidden"),
+      source: document.querySelector("#sourceSummary")?.textContent,
+      pageFetches: globalThis.__dingtalkPageFetches
+    }));
+    if (dingtalkAnalysis.protocol !== "HLS" || dingtalkAnalysis.grantVisible || !dingtalkAnalysis.source.includes("DingTalk permission fixture") || dingtalkAnalysis.pageFetches !== 2 || dingtalkApiRequests !== 0) {
+      throw new Error(`DingTalk permission retry did not complete analysis: ${JSON.stringify({ ...dingtalkAnalysis, dingtalkApiRequests })}`);
+    }
     if (runtimeErrors.length) throw new Error(`扩展 UI 运行期错误：${runtimeErrors.join(" | ")}`);
   } finally {
     await browser?.close().catch(() => {});
