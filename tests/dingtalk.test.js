@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractDingtalkParams, matchesDingtalkReplay, parseDingtalkResponse } from "../src/adapters/dingtalk.js";
+import { extractDingtalkParams, matchesDingtalkReplay, parseDingtalkResponse, resolveDingtalkReplay } from "../src/adapters/dingtalk.js";
 
 describe("钉钉适配器", () => {
   it("解析查询参数、hash 参数和裸参数", () => {
@@ -25,5 +25,28 @@ describe("钉钉适配器", () => {
 
   it("明确拒绝未登录响应", () => {
     expect(() => parseDingtalkResponse({ isLogined: false }, {})).toThrow(/未登录/);
+  });
+
+  it("优先通过来源标签页复用钉钉登录会话", async () => {
+    const requests = [];
+    const resolved = await resolveDingtalkReplay("https://n.dingtalk.com/live?roomId=r&liveUuid=u", {
+      async pageFetchText(url, options) {
+        requests.push({ url, options });
+        return {
+          text: JSON.stringify({
+            isLogined: true,
+            openLiveDetailModel: {
+              title: "已登录回放",
+              playbackUrl: "https://cdn.example/replay/master.m3u8"
+            }
+          })
+        };
+      }
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toContain("roomId=r");
+    expect(requests[0].options.headers.Accept).toContain("application/json");
+    expect(requests[0].options.pageUrl).toContain("roomId=r");
+    expect(resolved).toMatchObject({ adapter: "dingtalk", title: "已登录回放", playbackUrl: "https://cdn.example/replay/master.m3u8" });
   });
 });
