@@ -10,10 +10,21 @@ if (-not $version) {
   throw "manifest.json 中没有找到版本号。"
 }
 
+$npm = Get-Command npm.cmd -ErrorAction Stop
+Push-Location $repoRootPath
+try {
+  & $npm.Source run build
+  if ($LASTEXITCODE -ne 0) {
+    throw "扩展构建失败，退出码：$LASTEXITCODE"
+  }
+} finally {
+  Pop-Location
+}
+
 $distDir = Join-Path $repoRootPath "dist"
-$packageName = "钉钉直播回放下载器-v$version"
+$packageName = "网页视频下载器-v$version"
 $packageRoot = Join-Path $distDir $packageName
-$zipPath = Join-Path $distDir "dingtalk-replay-downloader-v$version.zip"
+$zipPath = Join-Path $distDir "web-video-downloader-v$version.zip"
 
 if (-not (Test-Path -LiteralPath $distDir)) {
   New-Item -ItemType Directory -Path $distDir | Out-Null
@@ -37,7 +48,6 @@ New-Item -ItemType Directory -Path $packageRoot | Out-Null
 $items = @(
   "manifest.json",
   "downloader.html",
-  "downloader.js",
   "styles.css",
   "使用说明.html",
   "README.md",
@@ -45,7 +55,11 @@ $items = @(
   "LICENSE.zh-CN.md",
   "THIRD_PARTY_NOTICES.md",
   "docs",
-  "vendor"
+  "vendor",
+  "build",
+  "icons",
+  "native-host",
+  "release-notes-v0.4.0.md"
 )
 
 foreach ($item in $items) {

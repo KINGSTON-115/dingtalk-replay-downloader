@@ -3,106 +3,165 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>钉钉直播回放下载器</title>
+  <title>网页视频下载器</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true"></div>
+        <img class="brand-icon" src="icons/icon-48.png" alt="">
         <div>
-          <p class="eyebrow" data-i18n="eyebrow">本地工具</p>
-          <h1 data-i18n="appTitle">钉钉直播回放</h1>
+          <p class="eyebrow">本地媒体工具</p>
+          <h1>网页视频下载器</h1>
         </div>
       </div>
-
       <div class="header-actions">
-        <button id="openTabBtn" class="button secondary compact" type="button" data-i18n="openTab">打开独立页</button>
+        <button id="enhancedBtn" class="button secondary compact" type="button">增强识别</button>
+        <button id="openManagerBtn" class="button secondary compact" type="button">打开任务页</button>
       </div>
     </header>
 
-    <div class="badges" aria-label="项目范围">
-      <span data-i18n="localOnly">本地处理</span>
-      <span data-i18n="authorizedOnly">已授权回放</span>
-      <span data-i18n="noServerAccount">无需插件账号</span>
+    <div class="badges" aria-label="能力边界">
+      <span>本地处理</span>
+      <span>非 DRM 媒体</span>
+      <span>钉钉内置适配</span>
+      <span id="modeBadge">快速面板</span>
+    </div>
+
+    <div id="managerNotice" class="notice info hidden">
+      下载在此独立任务页运行。关闭弹窗不会再中断任务；下载期间请保留本页。
     </div>
 
     <section class="panel source-panel">
       <div class="section-header">
         <div>
-          <h2 data-i18n="sourceTitle">回放来源</h2>
-          <p data-i18n="sourceHint">先打开能播放的回放，再粘贴链接或使用当前页。</p>
+          <h2>媒体来源</h2>
+          <p>支持播放页面识别、钉钉回放、HLS、DASH 和普通视频文件。</p>
         </div>
-        <button id="useCurrentTabBtn" class="button secondary compact" type="button" data-i18n="useCurrentTab">使用当前页</button>
+        <button id="detectBtn" class="button secondary compact" type="button">识别当前页</button>
       </div>
 
       <label class="field">
-        <span data-i18n="replayLink">回放链接</span>
-        <textarea id="replayUrl" rows="5" spellcheck="false" data-i18n-placeholder="replayPlaceholder" placeholder="https://n.dingtalk.com/..."></textarea>
+        <span>页面 / 播放清单 / 视频地址</span>
+        <textarea id="sourceInput" rows="4" spellcheck="false" placeholder="https://example.com/watch、video.m3u8、manifest.mpd、video.mp4，或钉钉回放链接"></textarea>
       </label>
 
-      <div class="field-footer">
-        <span data-i18n="inputHint">支持完整链接，也支持 roomId=...&liveUuid=...</span>
-        <button id="clearBtn" class="link-button" type="button" data-i18n="clear">清空</button>
+      <div id="candidateArea" class="candidate-area hidden">
+        <label class="field">
+          <span>识别到的媒体候选</span>
+          <select id="candidateSelect"></select>
+        </label>
+        <p id="candidateHint" class="field-hint"></p>
       </div>
+
+      <div class="inline-actions">
+        <button id="analyzeBtn" class="button secondary" type="button">解析媒体信息</button>
+        <button id="grantOriginBtn" class="button warning hidden" type="button">授权媒体域名</button>
+        <button id="resumeDraftBtn" class="button secondary hidden" type="button">恢复上次任务</button>
+        <button id="clearBtn" class="link-button" type="button">清空</button>
+      </div>
+    </section>
+
+    <section id="analysisPanel" class="panel analysis-panel hidden">
+      <div class="section-header compact-header">
+        <div>
+          <h2>媒体信息</h2>
+          <p id="sourceSummary"></p>
+        </div>
+        <span id="protocolBadge" class="protocol-badge">—</span>
+      </div>
+
+      <div class="settings-grid analysis-grid">
+        <label id="qualityField" class="field hidden">
+          <span>清晰度 / 视频轨</span>
+          <select id="qualitySelect"></select>
+        </label>
+        <label id="audioField" class="field hidden">
+          <span>音轨</span>
+          <select id="audioSelect"></select>
+        </label>
+        <label id="subtitleField" class="field hidden">
+          <span>字幕轨</span>
+          <select id="subtitleSelect"></select>
+        </label>
+      </div>
+      <div id="analysisWarning" class="notice warning hidden"></div>
     </section>
 
     <section class="panel settings-panel">
       <div class="section-header compact-header">
         <div>
-          <h2 data-i18n="settingsTitle">下载设置</h2>
+          <h2>下载设置</h2>
+          <p>浏览器模式优先流式写盘；复杂音视频合并可使用本地增强。</p>
         </div>
       </div>
 
       <div class="settings-grid">
-        <fieldset class="field">
-          <legend data-i18n="output">输出格式</legend>
-          <div class="segmented-control">
-            <label>
-              <input type="radio" name="outputFormat" value="mp4" checked>
-              <span data-i18n="mp4Option">MP4</span>
-            </label>
-            <label>
-              <input type="radio" name="outputFormat" value="ts">
-              <span data-i18n="tsOption">TS</span>
-            </label>
-          </div>
-        </fieldset>
-
-        <label class="field concurrency-field">
-          <span data-i18n="concurrency">下载并发</span>
+        <label class="field">
+          <span>处理方式</span>
+          <select id="engineSelect">
+            <option value="browser">浏览器本地处理</option>
+            <option value="native">FFmpeg 本地增强</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>输出格式</span>
+          <select id="outputFormat">
+            <option value="auto">自动选择</option>
+            <option value="mp4">MP4</option>
+            <option value="ts">原始 TS</option>
+            <option value="mkv">MKV（增强模式）</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>分片并发</span>
           <input id="concurrency" type="number" min="1" max="12" value="4" inputmode="numeric">
         </label>
+        <label id="cookieField" class="field checkbox-field hidden">
+          <input id="nativeCookies" type="checkbox">
+          <span>向 FFmpeg 提供当前媒体域的 Cookie（仅在确有需要时开启）</span>
+        </label>
       </div>
+
+      <div id="nativeStatus" class="notice info hidden"></div>
     </section>
 
     <div class="actionbar">
-      <button id="startBtn" class="button primary" type="button" data-i18n="download">开始下载回放</button>
-      <button id="cancelBtn" class="button danger" type="button" disabled data-i18n="cancel">取消任务</button>
+      <button id="startBtn" class="button primary" type="button">前往任务页下载</button>
+      <button id="cancelBtn" class="button danger" type="button" disabled>取消任务</button>
     </div>
 
     <section class="status-panel" aria-live="polite">
       <div class="status-summary">
         <div class="status-left">
-          <span class="status-dot" aria-hidden="true"></span>
+          <span id="statusDot" class="status-dot" aria-hidden="true"></span>
           <span id="statusText">就绪</span>
         </div>
         <strong id="progressText">0%</strong>
       </div>
-
-      <div class="progress-track">
-        <div id="progressBar" class="progress-bar"></div>
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+      <div class="status-meta">
+        <span id="speedText"></span>
+        <span id="bytesText"></span>
       </div>
+      <div class="log-header"><span>运行日志</span></div>
+      <pre id="log" data-empty="等待任务..."></pre>
+    </section>
 
-      <div class="log-header">
-        <span data-i18n="activityLog">运行日志</span>
+    <section class="panel history-panel">
+      <div class="section-header compact-header">
+        <div>
+          <h2>最近任务</h2>
+          <p>历史记录只保存脱敏后的来源地址。</p>
+        </div>
+        <button id="clearHistoryBtn" class="link-button" type="button">清除记录</button>
       </div>
-      <pre id="log" data-i18n-empty="logEmpty" data-empty="等待下载任务..."></pre>
+      <div id="taskHistory" class="task-history empty">暂无任务</div>
     </section>
   </main>
 
   <script src="vendor/mux.min.js"></script>
-  <script src="downloader.js"></script>
+  <script type="module" src="build/ui/downloader.js"></script>
 </body>
 </html>
