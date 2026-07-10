@@ -116,13 +116,23 @@ async function testUiBundle() {
     };
     const hlsFixtureRoot = resolve(root, "tests/fixtures/hls");
     let dingtalkApiRequests = 0;
+    let dingtalkAuthenticatedRequests = 0;
     await page.route("https://lv.dingtalk.com/getOpenLiveInfo*", async (route) => {
       dingtalkApiRequests += 1;
+      const authenticated = new URL(route.request().url()).searchParams.get("__vwd_test_session") === "1";
+      if (authenticated) dingtalkAuthenticatedRequests += 1;
       await route.fulfill({
         status: 200,
         contentType: "application/json; charset=utf-8",
         headers: corsHeaders,
-        body: JSON.stringify({ isLogined: false })
+        body: JSON.stringify(authenticated ? {
+          isLogined: true,
+          openLiveDetailModel: {
+            title: "DingTalk permission fixture",
+            playbackDuration: 30,
+            playbackUrl: "https://cdn.example.test/hls/master.m3u8"
+          }
+        } : { isLogined: false })
       });
     });
     await page.route(/^https:\/\/cdn\.example\.test\/hls\//, async (route) => {
@@ -151,6 +161,19 @@ async function testUiBundle() {
       const grantedOrigins = new Set();
       const grantedPermissions = new Set();
       globalThis.__dingtalkPageFetches = 0;
+      globalThis.__dingtalkCookieRuleAdds = 0;
+      globalThis.__dingtalkCookieRuleRemovals = 0;
+      let dingtalkCookieRuleActive = false;
+      const originalFetch = globalThis.fetch.bind(globalThis);
+      globalThis.fetch = (input, init) => {
+        const value = typeof input === "string" ? input : input?.url;
+        if (dingtalkCookieRuleActive && /^https:\/\/lv\.dingtalk\.com\/getOpenLiveInfo(?:\?|$)/.test(value || "")) {
+          const target = new URL(value);
+          target.searchParams.set("__vwd_test_session", "1");
+          return originalFetch(target.href, init);
+        }
+        return originalFetch(input, init);
+      };
       let directUserGesture = false;
       const originalAddEventListener = EventTarget.prototype.addEventListener;
       EventTarget.prototype.addEventListener = function addEventListenerWithGesture(type, listener, options) {
@@ -175,6 +198,7 @@ async function testUiBundle() {
       };
       globalThis.chrome = {
         runtime: {
+          id: "abcdefghijklmnopabcdefghijklmnop",
           getManifest: () => manifest,
           getURL: (path = "") => `${baseUrl}/${String(path).replace(/^\/+/, "")}`,
           sendMessage: async (message) => message?.type === "VWD_PING" ? { ok: true, version: manifest.version } : { ok: true, candidates: [] },
@@ -198,6 +222,23 @@ async function testUiBundle() {
           },
           create: async () => ({}),
           sendMessage: async () => ({ ok: true, candidates: [] })
+        },
+        cookies: {
+          getAllCookieStores: async () => [{ id: "store-1", tabIds: [dingtalkTab.id] }],
+          getAll: async () => [{ name: "session", value: "test-token", domain: ".dingtalk.com" }]
+        },
+        declarativeNetRequest: {
+          getSessionRules: async () => [],
+          updateSessionRules: async (update = {}) => {
+            if (update.addRules?.some((rule) => rule.action?.requestHeaders?.some((header) => header.header === "Cookie"))) {
+              dingtalkCookieRuleActive = true;
+              globalThis.__dingtalkCookieRuleAdds += 1;
+            }
+            if (update.removeRuleIds?.length && !update.addRules?.length) {
+              dingtalkCookieRuleActive = false;
+              globalThis.__dingtalkCookieRuleRemovals += 1;
+            }
+          }
         },
         permissions: {
           contains: async (request = {}) => (request.origins || []).every((origin) => grantedOrigins.has(origin)) && (request.permissions || []).every((permission) => grantedPermissions.has(permission)),
@@ -304,10 +345,12 @@ async function testUiBundle() {
       analysisVisible: !document.querySelector("#analysisPanel")?.classList.contains("hidden"),
       grantVisible: !document.querySelector("#grantOriginBtn")?.classList.contains("hidden"),
       status: document.querySelector("#statusText")?.textContent,
-      pageFetches: globalThis.__dingtalkPageFetches
+      pageFetches: globalThis.__dingtalkPageFetches,
+      cookieRuleAdds: globalThis.__dingtalkCookieRuleAdds,
+      cookieRuleRemovals: globalThis.__dingtalkCookieRuleRemovals
     }));
-    if (beforeDingtalkGrant.analysisVisible || !beforeDingtalkGrant.grantVisible || beforeDingtalkGrant.status !== "等待媒体域名授权" || beforeDingtalkGrant.pageFetches !== 1 || dingtalkApiRequests !== 0) {
-      throw new Error(`DingTalk CDN permission was not staged after resolving playback: ${JSON.stringify({ ...beforeDingtalkGrant, dingtalkApiRequests })}`);
+    if (beforeDingtalkGrant.analysisVisible || !beforeDingtalkGrant.grantVisible || beforeDingtalkGrant.status !== "等待媒体域名授权" || beforeDingtalkGrant.pageFetches !== 0 || beforeDingtalkGrant.cookieRuleAdds !== 1 || beforeDingtalkGrant.cookieRuleRemovals !== 1 || dingtalkApiRequests !== 1 || dingtalkAuthenticatedRequests !== 1) {
+      throw new Error(`DingTalk CDN permission was not staged after authenticated playback resolution: ${JSON.stringify({ ...beforeDingtalkGrant, dingtalkApiRequests, dingtalkAuthenticatedRequests })}`);
     }
     await page.click("#grantOriginBtn");
     await page.waitForSelector("#analysisPanel:not(.hidden)", { timeout: 10000 });
@@ -315,10 +358,12 @@ async function testUiBundle() {
       protocol: document.querySelector("#protocolBadge")?.textContent,
       grantVisible: !document.querySelector("#grantOriginBtn")?.classList.contains("hidden"),
       source: document.querySelector("#sourceSummary")?.textContent,
-      pageFetches: globalThis.__dingtalkPageFetches
+      pageFetches: globalThis.__dingtalkPageFetches,
+      cookieRuleAdds: globalThis.__dingtalkCookieRuleAdds,
+      cookieRuleRemovals: globalThis.__dingtalkCookieRuleRemovals
     }));
-    if (dingtalkAnalysis.protocol !== "HLS" || dingtalkAnalysis.grantVisible || !dingtalkAnalysis.source.includes("DingTalk permission fixture") || dingtalkAnalysis.pageFetches !== 2 || dingtalkApiRequests !== 0) {
-      throw new Error(`DingTalk permission retry did not complete analysis: ${JSON.stringify({ ...dingtalkAnalysis, dingtalkApiRequests })}`);
+    if (dingtalkAnalysis.protocol !== "HLS" || dingtalkAnalysis.grantVisible || !dingtalkAnalysis.source.includes("DingTalk permission fixture") || dingtalkAnalysis.pageFetches !== 0 || dingtalkAnalysis.cookieRuleAdds !== 2 || dingtalkAnalysis.cookieRuleRemovals !== 2 || dingtalkApiRequests !== 2 || dingtalkAuthenticatedRequests !== 2) {
+      throw new Error(`DingTalk authenticated permission retry did not complete analysis: ${JSON.stringify({ ...dingtalkAnalysis, dingtalkApiRequests, dingtalkAuthenticatedRequests })}`);
     }
     if (runtimeErrors.length) throw new Error(`扩展 UI 运行期错误：${runtimeErrors.join(" | ")}`);
   } finally {

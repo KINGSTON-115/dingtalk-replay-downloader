@@ -82,7 +82,7 @@ powershell -ExecutionPolicy Bypass -File native-host/install.ps1 -ExtensionId �
 | `https://*.dingtalk.com/*` | 是 | 调用钉钉回放信息接口 |
 | 全站 HTTP/HTTPS | 可选 | 增强识别与任意 CDN 媒体访问；与 `webRequest` 一同申请 |
 | `nativeMessaging` | 可选 | 连接用户安装的 FFmpeg 本地宿主 |
-| `cookies` | 可选 | 仅在用户主动要求时向 FFmpeg 提供当前媒体域的 Cookie |
+| `cookies` | 可选 | 解析钉钉回放时读取钉钉会话 Cookie；或在用户主动要求时向 FFmpeg 提供当前媒体域的 Cookie |
 
 默认安装不再同时拥有“全站访问 + Cookie”能力。
 

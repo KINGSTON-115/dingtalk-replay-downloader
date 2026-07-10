@@ -161,28 +161,57 @@ export async function resolveDingtalkReplay(rawInput, options = {}) {
     signal: options.signal,
     headers: { Accept: "application/json, text/plain, */*", ...options.http?.headers }
   };
-  let resource = null;
+  const transports = [];
+  if (typeof options.authenticatedFetchText === "function") {
+    transports.push({
+      label: "钉钉 Cookie 会话",
+      fetch: () => options.authenticatedFetchText(url.href, { ...requestOptions, pageUrl: params.input })
+    });
+  }
   if (typeof options.pageFetchText === "function") {
+    transports.push({
+      label: "当前钉钉标签页会话",
+      fetch: () => options.pageFetchText(url.href, { ...requestOptions, pageUrl: params.input })
+    });
+  }
+  transports.push({ label: "扩展默认请求", fetch: () => fetchTextResource(url.href, requestOptions) });
+
+  let loginRejected = false;
+  let authenticatedError = null;
+  let lastRequestError = null;
+  for (const transport of transports) {
+    let resource;
     try {
-      resource = await options.pageFetchText(url.href, { ...requestOptions, pageUrl: params.input });
-      options.onLog?.("已通过当前钉钉回放标签页复用登录会话。");
+      resource = await transport.fetch();
     } catch (error) {
       if (options.signal?.aborted) throw options.signal.reason || error;
-      options.onLog?.(`无法复用钉钉页面会话，改用扩展请求：${error.message}`);
+      if (transport.label === "钉钉 Cookie 会话") authenticatedError = error;
+      lastRequestError = error;
+      options.onLog?.(`${transport.label}失败：${error.message}`);
+      continue;
     }
+    const body = parseJsonLoose(resource.text);
+    if (body?.isLogined === false) {
+      loginRejected = true;
+      options.onLog?.(`${transport.label}未被钉钉接口识别为已登录，继续尝试兼容路径。`);
+      continue;
+    }
+    options.onLog?.(`${transport.label}已成功取得回放信息。`);
+    const replay = parseDingtalkResponse(body, params);
+    const selected = replay.playbackCandidates[0];
+    return {
+      type: selected.kind,
+      protocol: selected.kind,
+      title: replay.title,
+      playbackUrl: selected.url,
+      playbackSource: selected.source,
+      pageUrl: params.input,
+      alternatives: replay.playbackCandidates,
+      adapter: "dingtalk",
+      metadata: { roomId: params.roomId, liveUuid: params.liveUuid, duration: replay.duration }
+    };
   }
-  resource ||= await fetchTextResource(url.href, requestOptions);
-  const replay = parseDingtalkResponse(parseJsonLoose(resource.text), params);
-  const selected = replay.playbackCandidates[0];
-  return {
-    type: selected.kind,
-    protocol: selected.kind,
-    title: replay.title,
-    playbackUrl: selected.url,
-    playbackSource: selected.source,
-    pageUrl: params.input,
-    alternatives: replay.playbackCandidates,
-    adapter: "dingtalk",
-    metadata: { roomId: params.roomId, liveUuid: params.liveUuid, duration: replay.duration }
-  };
+  if (authenticatedError) throw new Error(`钉钉 Cookie 会话请求失败：${authenticatedError.message}`);
+  if (loginRejected) throw new Error("钉钉接口仍未接受当前登录会话。请重新加载钉钉回放页并确认可播放后再试。");
+  throw lastRequestError || new Error("钉钉回放信息请求失败。");
 }

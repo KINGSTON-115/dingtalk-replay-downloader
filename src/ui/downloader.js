@@ -1,4 +1,5 @@
 import { extractDingtalkParams, matchesDingtalkReplay } from "../adapters/dingtalk.js";
+import { dingtalkCookiePermissionGranted, fetchDingtalkWithSession, requestDingtalkCookiePermission } from "../adapters/dingtalk-session.js";
 import { fetchTextFromTab, getActiveTab, injectDiscovery, requestOrigins, sendRuntimeMessage } from "../core/chrome.js";
 import { candidateLabel, classifyMedia, formatBytes, mergeCandidates, normalizeCandidate } from "../core/media.js";
 import { analyzeResolvedSource, resolveInput } from "../core/resolver.js";
@@ -66,6 +67,11 @@ function setStatus(text, percent = null, tone = "normal") {
 }
 
 function reportAnalysisError(error, failureText = "解析失败") {
+  if (error?.code === "DINGTALK_COOKIE_PERMISSION") {
+    setStatus("等待钉钉会话授权", 0, "normal");
+    log(`提示：${error.message}`);
+    return;
+  }
   const waitingForPermission = state.pendingOrigins.length > 0;
   setStatus(waitingForPermission ? "等待媒体域名授权" : failureText, 0, waitingForPermission ? "normal" : "error");
   log(`${waitingForPermission ? "提示" : "错误"}：${error.message}`);
@@ -211,6 +217,22 @@ async function fetchTextFromSourceTab(url, options = {}) {
   return fetchTextFromTab(tab.id, url, options);
 }
 
+async function fetchDingtalkAuthenticated(url, options = {}) {
+  const tab = await findDingtalkSourceTab(options.pageUrl);
+  return fetchDingtalkWithSession(url, { ...options, sourceTabId: tab?.id ?? null, onLog: log });
+}
+
+async function ensureDingtalkSessionPermission(input, interactive = false) {
+  if (!matchesDingtalkReplay(input)) return;
+  const granted = interactive
+    ? await requestDingtalkCookiePermission()
+    : await dingtalkCookiePermissionGranted();
+  if (granted) return;
+  const error = new Error("需要授权读取钉钉登录 Cookie 才能解析回放；该权限只用于当前账号有权播放的钉钉内容。");
+  error.code = "DINGTALK_COOKIE_PERMISSION";
+  throw error;
+}
+
 async function collectCurrentPage({ inject = true } = {}) {
   const tab = await targetTab();
   if (!tab?.id || !/^https?:\/\//i.test(tab.url || "")) throw new Error("当前没有可识别的网页标签页。");
@@ -336,9 +358,10 @@ function renderAnalysis(analysis) {
   log(`媒体解析完成：${analysis.protocol.toUpperCase()}，${variants.length || 1} 个视频选项。`);
 }
 
-async function analyzeCurrent() {
+async function analyzeCurrent({ interactiveDingtalkSession = false } = {}) {
   const input = normalizeUserInput(els.sourceInput.value);
   if (!input) throw new Error("请先输入地址或识别当前页。");
+  await ensureDingtalkSessionPermission(input, interactiveDingtalkSession);
   clearAnalysis();
   setStatus("正在解析媒体", 8, "running");
   const candidate = currentCandidate();
@@ -353,6 +376,7 @@ async function analyzeCurrent() {
     variantId: els.qualitySelect.value || state.requestedSelections.qualityId || "",
     audioTrackId: els.audioSelect.value || state.requestedSelections.audioTrackId || "",
     subtitleTrackId: els.subtitleSelect.value || state.requestedSelections.subtitleTrackId || "",
+    authenticatedFetchText: fetchDingtalkAuthenticated,
     pageFetchText: fetchTextFromSourceTab,
     onLog: log,
     async ensureUrls(urls) {
@@ -621,7 +645,7 @@ els.sourceInput.addEventListener("input", () => {
   state.requestedSelections = {};
   clearAnalysis();
 });
-els.analyzeBtn.addEventListener("click", () => analyzeCurrent().catch((error) => {
+els.analyzeBtn.addEventListener("click", () => analyzeCurrent({ interactiveDingtalkSession: true }).catch((error) => {
   reportAnalysisError(error);
 }));
 els.qualitySelect.addEventListener("change", () => analyzeCurrent().catch((error) => reportAnalysisError(error, "重新解析失败")));

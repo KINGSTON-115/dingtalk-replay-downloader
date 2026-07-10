@@ -22,6 +22,7 @@ DOM / Performance / Fetch-XHR-MSE / webRequest
 - `src/content/content-script.js`：隔离世界中的 DOM、Performance 和页面信号收集。
 - `src/content/page-hook.js`：MAIN world 中透明观察 Fetch、XHR 与 MSE，不复制媒体正文。
 - `src/adapters/dingtalk.js`：钉钉参数、接口响应与播放地址解析。
+- `src/adapters/dingtalk-session.js`：按需读取钉钉 Cookie，并用短生命周期 DNR 规则限定到回放信息接口。
 - `src/protocols/hls.js`：基于 `m3u8-parser` 的 HLS 清单标准化。
 - `src/protocols/dash.js`：基于 `mpd-parser` 的 MPD 标准化。
 - `src/downloads/`：流式输出、分片调度、AES-128、TS 转封装与下载任务引擎。
@@ -59,7 +60,7 @@ Manifest V3 Service Worker 会被浏览器挂起，因此它只保存候选目�
 
 站点适配器只负责把页面/站点 API 转换为标准播放地址和元数据。钉钉适配器严格要求同时存在 `roomId` 与 `liveUuid`，不会把任意 `dingtalk.com` 页面视为回放。
 
-钉钉接口请求使用浏览器已有会话的 `credentials: include`，不手工拼接 `Cookie` 或伪造 `Referer`。适配器会递归检查常见嵌套响应字段并返回多个候选，协议层再负责 HLS/DASH/文件处理。
+钉钉接口的登录判定不能只依赖扩展页的 `credentials: include`。用户首次解析钉钉回放时会单独确认 `cookies` 权限；扩展读取钉钉域 Cookie 后安装一条短生命周期 DNR 规则，仅为 `https://lv.dingtalk.com/getOpenLiveInfo` 附加 Cookie 和回放页 origin Referer，请求完成后立即删除。页面会话请求和普通扩展请求仅作为兼容后备。适配器会递归检查常见嵌套响应字段并返回多个候选，协议层再负责 HLS/DASH/文件处理。
 
 后续站点只需新增适配器，不需要复制分片下载、AES 或输出代码。
 
@@ -104,7 +105,7 @@ File System Access API 需要用户在任务页明确选择文件或目录。独
 
 本地增强使用 Native Messaging 连接用户自行安装的 Node.js 宿主，由宿主以参数数组启动 FFmpeg，不使用 shell 拼接。宿主只接受 HTTP/HTTPS URL，清理输出文件名，并将临时文件限制在配置的下载目录。扩展 ID 会在安装时写入 Native Messaging `allowed_origins`。
 
-Cookie 与 Native Messaging 都是可选权限。只有用户主动勾选后，扩展才读取实际媒体 URL 所适用的 Cookie 并发送给本机宿主；若下载计划跨越多个 CDN hostname，Cookie 增强会被拒绝，避免 FFmpeg 将同一 Cookie header 复用到其他域。
+Cookie 与 Native Messaging 都是可选权限。钉钉适配器仅在用户确认后读取钉钉域 Cookie，并把它限定到回放信息接口；FFmpeg Cookie 增强则只有用户主动勾选后才读取实际媒体 URL 所适用的 Cookie 并发送给本机宿主。若下载计划跨越多个 CDN hostname，Cookie 增强会被拒绝，避免 FFmpeg 将同一 Cookie header 复用到其他域。
 
 ## 隐私与权限
 
