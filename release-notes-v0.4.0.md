@@ -13,6 +13,7 @@
 - 新增可选 FFmpeg Native Messaging 增强宿主，用于合并独立音视频轨和处理动态 DASH。
 - 默认权限不再包含全站 Cookie；全站识别、Cookie 和本地增强均按需单独授权。
 - 钉钉解析会按需读取当前浏览器的钉钉 Cookie，并用短生命周期规则仅对回放信息接口补充 Cookie、回放页 Referer 和 Origin；页面会话仍作为兼容后备。
+- 钉钉媒体清单沿用 v0.3 的实际网络方式，使用浏览器原生会话，不通过 DNR 向媒体 CDN 改写 Cookie、Referer、Origin 或桌面 UA。
 - 媒体域名和 Native Messaging 权限改为严格从用户点击中申请，并在授权后自动继续解析。
 - 新增任务级 origin Referer 会话规则、字幕轨下载、跨域 Cookie 防泄漏和 429/503 自适应并发。
 - 新增构建脚本、42 项单元测试、后台/UI 冒烟测试、Native Messaging framing 测试和确定性扩展图标。

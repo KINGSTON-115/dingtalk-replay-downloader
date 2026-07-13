@@ -97,7 +97,7 @@ AES-128 使用 Web Crypto API 本地解密，key 请求按 URI 去重。`SAMPLE-
 - 单资源 256 MB 安全上限，key 为 1 MB；
 - 同一批请求使用 `Promise.allSettled`，失败时等待其余请求收尾，避免旧 worker 污染下一任务。
 
-部分 CDN 要求原播放页 `Referer`。扩展在解析首个清单前和任务开始时使用 `declarativeNetRequestWithHostAccess` 创建 session rule；通用媒体默认只发送播放页 origin，钉钉媒体按原版请求补完整回放页 `Referer`、`Origin`、语言和桌面 UA。解析过程中发现新的子清单域名时会增量加入，解析或任务结束后立即删除。钉钉 Cookie 只会附加到 `*.dingtalk.com` 媒体域，不会复制到无关 CDN。规则同时限制为本次媒体域名和扩展自身 initiator；没有对应 host permission 时不能修改网站请求，也不会获得额外站点访问能力。
+部分 CDN 要求原播放页 `Referer`。通用媒体在解析首个清单前和任务开始时使用 `declarativeNetRequestWithHostAccess` 创建短生命周期 session rule，并在发现子清单域名时增量更新。钉钉媒体则沿用 v0.3 的实际网络行为：取得播放地址后使用浏览器原生 `credentials: include` 请求，不通过 DNR 改写媒体 Cookie、Referer、Origin 或桌面 UA，避免 CDN 因额外防盗链请求头返回 403。钉钉 API 的 Cookie 规则仍只作用于 `getOpenLiveInfo`，不会复制到媒体 CDN。
 
 ## 输出与本地增强
 

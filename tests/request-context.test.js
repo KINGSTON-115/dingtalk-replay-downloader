@@ -23,6 +23,20 @@ const analysis = {
 };
 
 describe("任务级请求上下文", () => {
+  it("允许站点适配器关闭媒体请求头改写", async () => {
+    let updateCalls = 0;
+    globalThis.chrome = {
+      declarativeNetRequest: {
+        getSessionRules: async () => [],
+        updateSessionRules: async () => { updateCalls += 1; }
+      }
+    };
+    const context = await createRequestContext("https://n.dingtalk.com/live", () => {}, { disabled: true });
+    await context.addUrls(["https://cdn.example/media.m3u8"]);
+    await context.cleanup();
+    expect(updateCalls).toBe(0);
+  });
+
   it("收集所有清单、分片、map 和 key 域名", () => {
     expect(collectAnalysisOrigins(analysis).sort()).toEqual([
       "https://keys.example/*",

@@ -138,10 +138,6 @@ async function testUiBundle() {
     });
     await page.route(/^https:\/\/cdn\.example\.test\/hls\//, async (route) => {
       const requestUrl = new URL(route.request().url());
-      if (requestUrl.searchParams.get("__vwd_test_media_context") !== "1") {
-        await route.fulfill({ status: 403, body: "missing media request context", headers: corsHeaders });
-        return;
-      }
       dingtalkMediaContextRequests += 1;
       const pathname = decodeURIComponent(requestUrl.pathname);
       const relativePath = pathname.replace(/^\/hls\//, "");
@@ -172,18 +168,12 @@ async function testUiBundle() {
       globalThis.__dingtalkCookieRuleRemovals = 0;
       const dingtalkCookieRuleIds = new Set();
       const dingtalkApiContextRuleIds = new Set();
-      const dingtalkMediaContextRuleIds = new Set();
       const originalFetch = globalThis.fetch.bind(globalThis);
       globalThis.fetch = (input, init) => {
         const value = typeof input === "string" ? input : input?.url;
         if (dingtalkApiContextRuleIds.size && /^https:\/\/lv\.dingtalk\.com\/getOpenLiveInfo(?:\?|$)/.test(value || "")) {
           const target = new URL(value);
           target.searchParams.set("__vwd_test_session", "1");
-          return originalFetch(target.href, init);
-        }
-        if (dingtalkMediaContextRuleIds.size && /^https:\/\/cdn\.example\.test\/hls\//.test(value || "")) {
-          const target = new URL(value);
-          target.searchParams.set("__vwd_test_media_context", "1");
           return originalFetch(target.href, init);
         }
         return originalFetch(input, init);
@@ -246,7 +236,6 @@ async function testUiBundle() {
           updateSessionRules: async (update = {}) => {
             for (const rule of update.addRules || []) {
               const requestHeaders = rule.action?.requestHeaders || [];
-              if (rule.condition?.requestDomains?.includes("cdn.example.test")) dingtalkMediaContextRuleIds.add(rule.id);
               if (requestHeaders.some((header) => header.header === "Cookie")) {
                 dingtalkCookieRuleIds.add(rule.id);
                 globalThis.__dingtalkCookieRuleAdds += 1;
@@ -262,7 +251,6 @@ async function testUiBundle() {
             }
             if (update.removeRuleIds?.length && !update.addRules?.length) {
               update.removeRuleIds.forEach((id) => {
-                dingtalkMediaContextRuleIds.delete(id);
                 dingtalkApiContextRuleIds.delete(id);
                 if (dingtalkCookieRuleIds.delete(id)) globalThis.__dingtalkCookieRuleRemovals += 1;
               });

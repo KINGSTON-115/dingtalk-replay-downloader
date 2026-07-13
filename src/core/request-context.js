@@ -64,6 +64,7 @@ function isCookieDomain(hostname, allowedDomains) {
 }
 
 export async function createRequestContext(pageUrl, onLog = () => {}, options = {}) {
+  if (options.disabled) return emptyRequestContext();
   if (!pageUrl || !/^https?:\/\//i.test(pageUrl) || !chrome.declarativeNetRequest) return emptyRequestContext();
   const context = emptyRequestContext();
   const referrer = new URL(pageUrl);
