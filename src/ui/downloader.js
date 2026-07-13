@@ -1,5 +1,5 @@
 import { extractDingtalkParams, matchesDingtalkReplay } from "../adapters/dingtalk.js";
-import { DINGTALK_DESKTOP_USER_AGENT, collectDingtalkCookieHeader, dingtalkCookiePermissionGranted, fetchDingtalkWithSession, requestDingtalkCookiePermission } from "../adapters/dingtalk-session.js";
+import { dingtalkCookiePermissionGranted, fetchDingtalkWithSession, requestDingtalkCookiePermission } from "../adapters/dingtalk-session.js";
 import { fetchTextFromTab, getActiveTab, injectDiscovery, requestOrigins, sendRuntimeMessage } from "../core/chrome.js";
 import { candidateLabel, classifyMedia, formatBytes, mergeCandidates, normalizeCandidate } from "../core/media.js";
 import { analyzeResolvedSource, resolveInput } from "../core/resolver.js";
@@ -224,38 +224,14 @@ async function fetchDingtalkAuthenticated(url, options = {}) {
 
 function requestContextOptionsForResolved(resolved) {
   if (resolved?.adapter !== "dingtalk") return {};
-  return {
-    referrer: resolved.pageUrl,
-    requestHeaders: [
-      { header: "Origin", value: "https://n.dingtalk.com" },
-      { header: "Accept-Language", value: "zh-CN,zh;q=0.9" },
-      { header: "User-Agent", value: DINGTALK_DESKTOP_USER_AGENT }
-    ],
-    cookieDomains: ["dingtalk.com"]
-  };
+  return { disabled: true };
 }
 
 function dingtalkMediaHttpOptions() {
   return {
     credentials: "include",
-    headers: {
-      Accept: "*/*",
-      "Accept-Language": "zh-CN,zh;q=0.9"
-    }
+    headers: { Accept: "*/*" }
   };
-}
-
-async function requestContextOptionsForDingtalk(resolved) {
-  const options = requestContextOptionsForResolved(resolved);
-  if (resolved?.adapter !== "dingtalk") return options;
-  try {
-    const tab = await findDingtalkSourceTab(resolved.pageUrl);
-    const cookies = await collectDingtalkCookieHeader({ pageUrl: resolved.pageUrl, sourceTabId: tab?.id ?? null });
-    if (cookies.header) options.cookieHeader = cookies.header;
-  } catch {
-    // Cookie-bearing media headers are a compatibility boost, not a hard requirement.
-  }
-  return options;
 }
 
 async function ensureDingtalkSessionPermission(input, interactive = false) {
@@ -433,9 +409,16 @@ async function analyzeCurrent({ interactiveDingtalkSession = false } = {}) {
     }
   };
   const resolved = await resolveInput(input, common);
+  if (resolved.adapter === "dingtalk") {
+    try {
+      log(`钉钉媒体域：${new URL(resolved.playbackUrl).hostname}`);
+    } catch {
+      // 播放地址会在后续解析中给出明确错误。
+    }
+  }
   if (!(await ensureOriginPermission(resolved.playbackUrl))) throw new Error("需要授权实际媒体所在的 CDN 域名。");
   if (resolved.adapter === "dingtalk") Object.assign(common.http, dingtalkMediaHttpOptions());
-  analysisRequestContext = await createRequestContext(resolved.pageUrl, log, await requestContextOptionsForDingtalk(resolved));
+  analysisRequestContext = await createRequestContext(resolved.pageUrl, log, requestContextOptionsForResolved(resolved));
   try {
     await analysisRequestContext.addUrls([resolved.playbackUrl]);
     state.analysis = await analyzeResolvedSource(resolved, common);
@@ -516,7 +499,7 @@ async function refreshHistory() {
 async function runBrowserTask(analysis, controller) {
   const descriptors = describeOutputs(analysis, { outputFormat: els.outputFormat.value });
   const sinks = analysis.protocol === "file" ? new Map() : await prepareOutputSinks(descriptors);
-  const removeRequestContext = await installRequestContext(analysis, log, await requestContextOptionsForDingtalk(analysis.resolved));
+  const removeRequestContext = await installRequestContext(analysis, log, requestContextOptionsForResolved(analysis.resolved));
   try {
     return await runDownload(analysis, descriptors, sinks, {
       signal: controller.signal,
