@@ -49,4 +49,22 @@ describe("钉钉适配器", () => {
     expect(requests[0].options.pageUrl).toContain("roomId=r");
     expect(resolved).toMatchObject({ adapter: "dingtalk", title: "已登录回放", playbackUrl: "https://cdn.example/replay/master.m3u8" });
   });
+
+  it("优先使用显式 Cookie 会话并跳过页面兼容路径", async () => {
+    let pageFetches = 0;
+    const resolved = await resolveDingtalkReplay("https://n.dingtalk.com/live?roomId=r&liveUuid=u", {
+      authenticatedFetchText: async () => ({
+        text: JSON.stringify({
+          isLogined: true,
+          openLiveDetailModel: { title: "Cookie 回放", playbackUrl: "https://cdn.example/cookie/master.m3u8" }
+        })
+      }),
+      pageFetchText: async () => {
+        pageFetches += 1;
+        return { text: JSON.stringify({ isLogined: false }) };
+      }
+    });
+    expect(pageFetches).toBe(0);
+    expect(resolved).toMatchObject({ title: "Cookie 回放", playbackUrl: "https://cdn.example/cookie/master.m3u8" });
+  });
 });

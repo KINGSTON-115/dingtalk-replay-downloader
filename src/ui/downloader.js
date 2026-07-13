@@ -1,8 +1,9 @@
 import { extractDingtalkParams, matchesDingtalkReplay } from "../adapters/dingtalk.js";
+import { DINGTALK_DESKTOP_USER_AGENT, collectDingtalkCookieHeader, dingtalkCookiePermissionGranted, fetchDingtalkWithSession, requestDingtalkCookiePermission } from "../adapters/dingtalk-session.js";
 import { fetchTextFromTab, getActiveTab, injectDiscovery, requestOrigins, sendRuntimeMessage } from "../core/chrome.js";
 import { candidateLabel, classifyMedia, formatBytes, mergeCandidates, normalizeCandidate } from "../core/media.js";
 import { analyzeResolvedSource, resolveInput } from "../core/resolver.js";
-import { collectAnalysisOrigins, installRequestContext } from "../core/request-context.js";
+import { collectAnalysisOrigins, createRequestContext, installRequestContext } from "../core/request-context.js";
 import { clearDraft, clearTasks, createTask, listTasks, loadDraft, saveDraft, updateTask } from "../core/task-store.js";
 import { normalizeUserInput, originPattern, redactUrl, sanitizeFileName, stableId } from "../core/url.js";
 import { describeOutputs, runDownload } from "../downloads/engine.js";
@@ -66,6 +67,11 @@ function setStatus(text, percent = null, tone = "normal") {
 }
 
 function reportAnalysisError(error, failureText = "解析失败") {
+  if (error?.code === "DINGTALK_COOKIE_PERMISSION") {
+    setStatus("等待钉钉会话授权", 0, "normal");
+    log(`提示：${error.message}`);
+    return;
+  }
   const waitingForPermission = state.pendingOrigins.length > 0;
   setStatus(waitingForPermission ? "等待媒体域名授权" : failureText, 0, waitingForPermission ? "normal" : "error");
   log(`${waitingForPermission ? "提示" : "错误"}：${error.message}`);
@@ -211,6 +217,58 @@ async function fetchTextFromSourceTab(url, options = {}) {
   return fetchTextFromTab(tab.id, url, options);
 }
 
+async function fetchDingtalkAuthenticated(url, options = {}) {
+  const tab = await findDingtalkSourceTab(options.pageUrl);
+  return fetchDingtalkWithSession(url, { ...options, sourceTabId: tab?.id ?? null, onLog: log });
+}
+
+function requestContextOptionsForResolved(resolved) {
+  if (resolved?.adapter !== "dingtalk") return {};
+  return {
+    referrer: resolved.pageUrl,
+    requestHeaders: [
+      { header: "Origin", value: "https://n.dingtalk.com" },
+      { header: "Accept-Language", value: "zh-CN,zh;q=0.9" },
+      { header: "User-Agent", value: DINGTALK_DESKTOP_USER_AGENT }
+    ],
+    cookieDomains: ["dingtalk.com"]
+  };
+}
+
+function dingtalkMediaHttpOptions() {
+  return {
+    credentials: "include",
+    headers: {
+      Accept: "*/*",
+      "Accept-Language": "zh-CN,zh;q=0.9"
+    }
+  };
+}
+
+async function requestContextOptionsForDingtalk(resolved) {
+  const options = requestContextOptionsForResolved(resolved);
+  if (resolved?.adapter !== "dingtalk") return options;
+  try {
+    const tab = await findDingtalkSourceTab(resolved.pageUrl);
+    const cookies = await collectDingtalkCookieHeader({ pageUrl: resolved.pageUrl, sourceTabId: tab?.id ?? null });
+    if (cookies.header) options.cookieHeader = cookies.header;
+  } catch {
+    // Cookie-bearing media headers are a compatibility boost, not a hard requirement.
+  }
+  return options;
+}
+
+async function ensureDingtalkSessionPermission(input, interactive = false) {
+  if (!matchesDingtalkReplay(input)) return;
+  const granted = interactive
+    ? await requestDingtalkCookiePermission()
+    : await dingtalkCookiePermissionGranted();
+  if (granted) return;
+  const error = new Error("需要授权读取钉钉登录 Cookie 才能解析回放；该权限只用于当前账号有权播放的钉钉内容。");
+  error.code = "DINGTALK_COOKIE_PERMISSION";
+  throw error;
+}
+
 async function collectCurrentPage({ inject = true } = {}) {
   const tab = await targetTab();
   if (!tab?.id || !/^https?:\/\//i.test(tab.url || "")) throw new Error("当前没有可识别的网页标签页。");
@@ -336,9 +394,10 @@ function renderAnalysis(analysis) {
   log(`媒体解析完成：${analysis.protocol.toUpperCase()}，${variants.length || 1} 个视频选项。`);
 }
 
-async function analyzeCurrent() {
+async function analyzeCurrent({ interactiveDingtalkSession = false } = {}) {
   const input = normalizeUserInput(els.sourceInput.value);
   if (!input) throw new Error("请先输入地址或识别当前页。");
+  await ensureDingtalkSessionPermission(input, interactiveDingtalkSession);
   clearAnalysis();
   setStatus("正在解析媒体", 8, "running");
   const candidate = currentCandidate();
@@ -347,20 +406,25 @@ async function analyzeCurrent() {
   }
 
   const controller = new AbortController();
+  let analysisRequestContext = null;
   const common = {
     candidate,
     signal: controller.signal,
     variantId: els.qualitySelect.value || state.requestedSelections.qualityId || "",
     audioTrackId: els.audioSelect.value || state.requestedSelections.audioTrackId || "",
     subtitleTrackId: els.subtitleSelect.value || state.requestedSelections.subtitleTrackId || "",
+    authenticatedFetchText: fetchDingtalkAuthenticated,
     pageFetchText: fetchTextFromSourceTab,
     onLog: log,
     async ensureUrls(urls) {
       const origins = Array.from(new Set((urls || []).filter((url) => /^https?:\/\//i.test(url)).map(originPattern)));
-      if (!origins.length || await chrome.permissions.contains({ origins })) return;
-      state.pendingOrigins = origins;
-      els.grantOriginBtn.classList.remove("hidden");
-      throw new Error("需要先授权 HLS 子清单所在的媒体域名，然后重新解析。");
+      if (!origins.length) return;
+      if (!(await chrome.permissions.contains({ origins }))) {
+        state.pendingOrigins = origins;
+        els.grantOriginBtn.classList.remove("hidden");
+        throw new Error("需要先授权 HLS 子清单所在的媒体域名，然后重新解析。");
+      }
+      await analysisRequestContext?.addUrls(urls);
     },
     http: {
       onRetry({ attempt, delay, error }) {
@@ -370,7 +434,15 @@ async function analyzeCurrent() {
   };
   const resolved = await resolveInput(input, common);
   if (!(await ensureOriginPermission(resolved.playbackUrl))) throw new Error("需要授权实际媒体所在的 CDN 域名。");
-  state.analysis = await analyzeResolvedSource(resolved, common);
+  if (resolved.adapter === "dingtalk") Object.assign(common.http, dingtalkMediaHttpOptions());
+  analysisRequestContext = await createRequestContext(resolved.pageUrl, log, await requestContextOptionsForDingtalk(resolved));
+  try {
+    await analysisRequestContext.addUrls([resolved.playbackUrl]);
+    state.analysis = await analyzeResolvedSource(resolved, common);
+  } finally {
+    await analysisRequestContext.cleanup();
+    analysisRequestContext = null;
+  }
   renderAnalysis(state.analysis);
   const allOrigins = collectAnalysisOrigins(state.analysis);
   let waitingForAdditionalOrigins = false;
@@ -444,12 +516,13 @@ async function refreshHistory() {
 async function runBrowserTask(analysis, controller) {
   const descriptors = describeOutputs(analysis, { outputFormat: els.outputFormat.value });
   const sinks = analysis.protocol === "file" ? new Map() : await prepareOutputSinks(descriptors);
-  const removeRequestContext = await installRequestContext(analysis, log);
+  const removeRequestContext = await installRequestContext(analysis, log, await requestContextOptionsForDingtalk(analysis.resolved));
   try {
     return await runDownload(analysis, descriptors, sinks, {
       signal: controller.signal,
       concurrency: Math.max(1, Math.min(Number(els.concurrency.value) || 4, 12)),
       outputFormat: els.outputFormat.value,
+      http: analysis.resolved.adapter === "dingtalk" ? dingtalkMediaHttpOptions() : undefined,
       keepPartialOnAbort: Boolean(analysis.inspection.live),
       onProgress: updateProgress,
       onLog: log
@@ -559,11 +632,14 @@ async function updateNativeStatus(interactive = false) {
 
 function updateOutputOptions() {
   const native = els.engineSelect.value === "native";
+  const source = Array.from(els.outputFormat.options).find((option) => option.value === "auto");
+  const mp4 = Array.from(els.outputFormat.options).find((option) => option.value === "mp4");
   const mkv = Array.from(els.outputFormat.options).find((option) => option.value === "mkv");
-  const ts = Array.from(els.outputFormat.options).find((option) => option.value === "ts");
+  if (source) source.disabled = native;
+  if (mp4) mp4.disabled = !native;
   if (mkv) mkv.disabled = !native;
-  if (ts) ts.disabled = native;
-  if ((!native && els.outputFormat.value === "mkv") || (native && els.outputFormat.value === "ts")) {
+  const validFormats = native ? ["mp4", "mkv"] : ["auto"];
+  if (!validFormats.includes(els.outputFormat.value)) {
     els.outputFormat.value = native ? "mp4" : "auto";
   }
 }
@@ -621,7 +697,7 @@ els.sourceInput.addEventListener("input", () => {
   state.requestedSelections = {};
   clearAnalysis();
 });
-els.analyzeBtn.addEventListener("click", () => analyzeCurrent().catch((error) => {
+els.analyzeBtn.addEventListener("click", () => analyzeCurrent({ interactiveDingtalkSession: true }).catch((error) => {
   reportAnalysisError(error);
 }));
 els.qualitySelect.addEventListener("change", () => analyzeCurrent().catch((error) => reportAnalysisError(error, "重新解析失败")));

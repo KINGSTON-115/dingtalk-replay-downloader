@@ -23,7 +23,7 @@
 | 类型 | 浏览器模式 | FFmpeg 增强模式 |
 | --- | --- | --- |
 | 普通 MP4/WebM/MOV/MKV/音频文件 | 直接下载 | 支持 |
-| HLS TS + H264/AAC | 流式保存 TS 或增量转封装 MP4 | 支持 |
+| HLS TS + H264/AAC | 保持源格式并流式保存 TS | 合并为 MP4/MKV |
 | HLS fMP4 | 流式保存 MP4 | 支持 |
 | HLS 独立音视频轨 | 保存为两个轨道文件 | 自动合并 |
 | HLS 直播 | 持续录制，手动停止并保存 | 支持 |
@@ -82,7 +82,7 @@ powershell -ExecutionPolicy Bypass -File native-host/install.ps1 -ExtensionId �
 | `https://*.dingtalk.com/*` | 是 | 调用钉钉回放信息接口 |
 | 全站 HTTP/HTTPS | 可选 | 增强识别与任意 CDN 媒体访问；与 `webRequest` 一同申请 |
 | `nativeMessaging` | 可选 | 连接用户安装的 FFmpeg 本地宿主 |
-| `cookies` | 可选 | 仅在用户主动要求时向 FFmpeg 提供当前媒体域的 Cookie |
+| `cookies` | 可选 | 解析钉钉回放时读取钉钉会话 Cookie；或在用户主动要求时向 FFmpeg 提供当前媒体域的 Cookie |
 
 默认安装不再同时拥有“全站访问 + Cookie”能力。
 
@@ -108,7 +108,7 @@ npm run package        # 构建并生成发布 zip
 
 ## 第三方组件
 
-运行时使用 `mux.js`、`m3u8-parser` 和 `mpd-parser`；开发阶段使用 esbuild、Vitest、Playwright 和 Sharp。许可证与版本见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+运行时使用 `m3u8-parser` 和 `mpd-parser`；开发阶段使用 esbuild、Vitest、Playwright 和 Sharp。许可证与版本见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 许可证
 

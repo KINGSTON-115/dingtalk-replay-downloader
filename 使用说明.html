@@ -61,6 +61,7 @@
     <ol>
       <li>在同一个浏览器中登录目标网站，确认目标视频能正常播放。</li>
       <li>播放视频几秒钟，然后点击扩展图标和“识别当前页”。</li>
+      <li>首次解析钉钉回放时，确认浏览器的 Cookie 权限提示；该权限只用于恢复当前钉钉登录会话。</li>
       <li>在候选列表中选择 HLS、DASH 或视频文件，点击“解析媒体信息”。</li>
       <li>选择清晰度、音轨、浏览器模式或 FFmpeg 本地增强模式。</li>
       <li>点击“前往任务页下载”。在独立任务页确认保存位置并开始。</li>
@@ -83,7 +84,7 @@
       <thead><tr><th>媒体</th><th>浏览器模式</th><th>本地增强模式</th></tr></thead>
       <tbody>
         <tr><td>普通 MP4/WebM/MOV 等</td><td>浏览器原生下载</td><td>FFmpeg 复制封装</td></tr>
-        <tr><td>HLS TS</td><td>保存 TS 或逐分片转 MP4</td><td>合并为 MP4/MKV</td></tr>
+        <tr><td>HLS TS</td><td>保持源格式并保存 TS</td><td>合并为 MP4/MKV</td></tr>
         <tr><td>HLS fMP4</td><td>流式写入 MP4</td><td>合并为 MP4/MKV</td></tr>
         <tr><td>独立音视频轨</td><td>选择目录，保存为 video/audio 两个文件</td><td>自动合并单文件</td></tr>
         <tr><td>HLS 直播</td><td>持续录制，点击“停止并保存”</td><td>支持</td></tr>
@@ -112,6 +113,8 @@
     <p>点击“增强识别”，刷新页面，再开始播放。扩展要寻找的是 blob 背后的 HLS、DASH 或媒体分片。</p>
     <h3>解析成功但浏览器模式得到两个文件</h3>
     <p>网站使用了独立视频轨和音频轨。使用 FFmpeg 本地增强可合并；也可以保留两个轨道文件自行处理。</p>
+    <h3>为什么浏览器模式保存的是 TS</h3>
+    <p>这是 HLS 的原始媒体格式，保留源格式可以避免浏览器转封装造成绿块、花屏或时间轴错误。需要 MP4 时请使用 FFmpeg 本地增强模式。</p>
     <h3>提示 DRM 或 ContentProtection</h3>
     <p>这表示媒体由 Widevine、PlayReady、FairPlay、SAMPLE-AES 等机制保护。本扩展不会绕过 DRM。</p>
     <h3>403、401 或地址过期</h3>
