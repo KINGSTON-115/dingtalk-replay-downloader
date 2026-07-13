@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  DINGTALK_DESKTOP_USER_AGENT,
   collectDingtalkCookieHeader,
   fetchDingtalkWithSession,
   requestDingtalkCookiePermission
@@ -28,7 +29,7 @@ describe("钉钉 Cookie 会话", () => {
         getAllCookieStores: async () => [{ id: "store-1", tabIds: [77] }],
         getAll: async (details) => {
           cookieQueries.push(details);
-          if (details.url === "https://lv.dingtalk.com/") return [{ name: "session", value: "api-token", domain: ".dingtalk.com" }];
+          if (details.url === "https://lv.dingtalk.com/") return [{ name: "LV_PC_SESSION", value: "api-token", domain: ".dingtalk.com" }];
           if (details.url?.startsWith("https://n.dingtalk.com/")) return [{ name: "page", value: "page-token", domain: "n.dingtalk.com" }];
           return [];
         }
@@ -41,7 +42,8 @@ describe("钉钉 Cookie 会话", () => {
       sourceTabId: 77
     });
     expect(permissionRequests).toEqual([{ permissions: ["cookies"] }]);
-    expect(cookies.header).toContain("session=api-token");
+    expect(cookies.header).toContain("LV_PC_SESSION=api-token");
+    expect(cookies.header).toContain("PC_SESSION=api-token");
     expect(cookies.header).toContain("page=page-token");
     expect(cookieQueries.every((query) => query.storeId === "store-1")).toBe(true);
   });
@@ -54,7 +56,7 @@ describe("钉钉 Cookie 会话", () => {
       cookies: {
         getAllCookieStores: async () => [],
         getAll: async (details) => details.url === "https://lv.dingtalk.com/"
-          ? [{ name: "session", value: "token", domain: ".dingtalk.com" }]
+          ? [{ name: "LV_PC_SESSION", value: "token", domain: ".dingtalk.com" }]
           : []
       },
       declarativeNetRequest: {
@@ -73,8 +75,13 @@ describe("钉钉 Cookie 会话", () => {
     const rule = updates[0].addRules[0];
     expect(resource.text).toContain("isLogined");
     expect(rule.action.requestHeaders).toEqual([
-      { header: "Cookie", operation: "set", value: "session=token" },
-      { header: "Referer", operation: "set", value: "https://n.dingtalk.com/" }
+      { header: "Cookie", operation: "set", value: "LV_PC_SESSION=token; PC_SESSION=token" },
+      { header: "Accept-Language", operation: "set", value: "zh-CN,zh;q=0.9" },
+      { header: "Sec-Fetch-Site", operation: "set", value: "none" },
+      { header: "Sec-Fetch-Mode", operation: "set", value: "navigate" },
+      { header: "Sec-Fetch-User", operation: "set", value: "?1" },
+      { header: "Sec-Fetch-Dest", operation: "set", value: "document" },
+      { header: "User-Agent", operation: "set", value: DINGTALK_DESKTOP_USER_AGENT }
     ]);
     expect(rule.condition).toMatchObject({
       urlFilter: "|https://lv.dingtalk.com/getOpenLiveInfo?roomId=r&liveUuid=u|",

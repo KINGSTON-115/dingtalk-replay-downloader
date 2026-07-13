@@ -3,15 +3,34 @@ import { stableId } from "../core/url.js";
 
 const API_ORIGIN = "https://lv.dingtalk.com";
 const API_PATH = "/getOpenLiveInfo";
+export const DINGTALK_DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+const DINGTALK_NAVIGATE_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8";
 const COOKIE_URLS = [
-  "https://dingtalk.com/",
-  "https://www.dingtalk.com/",
-  "https://n.dingtalk.com/",
   "https://lv.dingtalk.com/",
+  "https://n.dingtalk.com/",
+  "https://h5.dingtalk.com/",
   "https://login.dingtalk.com/",
-  "https://h5.dingtalk.com/"
+  "https://www.dingtalk.com/",
+  "https://dingtalk.com/"
 ];
-const COOKIE_DOMAINS = [".dingtalk.com", "dingtalk.com", "lv.dingtalk.com", "n.dingtalk.com", "login.dingtalk.com"];
+const COOKIE_DOMAINS = [".dingtalk.com", "dingtalk.com", "lv.dingtalk.com", ".lv.dingtalk.com", "n.dingtalk.com", ".n.dingtalk.com", "h5.dingtalk.com", "login.dingtalk.com"];
+
+function apiSessionHeaderVariants(cookieHeader) {
+  const originalLike = [
+    { header: "Cookie", operation: "set", value: cookieHeader },
+    { header: "Accept-Language", operation: "set", value: "zh-CN,zh;q=0.9" },
+    { header: "Sec-Fetch-Site", operation: "set", value: "none" },
+    { header: "Sec-Fetch-Mode", operation: "set", value: "navigate" },
+    { header: "Sec-Fetch-User", operation: "set", value: "?1" },
+    { header: "Sec-Fetch-Dest", operation: "set", value: "document" },
+    { header: "User-Agent", operation: "set", value: DINGTALK_DESKTOP_USER_AGENT }
+  ];
+  return [
+    originalLike,
+    originalLike.filter((item) => item.header !== "User-Agent"),
+    originalLike.filter((item) => item.header === "Cookie" || item.header === "Accept-Language")
+  ];
+}
 
 function apiUrl(value) {
   const url = new URL(value);
@@ -69,6 +88,8 @@ export async function collectDingtalkCookieHeader({ pageUrl = "", sourceTabId = 
     add(await readCookies(withStore({ url })));
   }
   add(await readCookies(withStore({ url: `${API_ORIGIN}/` })));
+  if (jar.has("LV_PC_SESSION") && !jar.has("PC_SESSION")) jar.set("PC_SESSION", jar.get("LV_PC_SESSION"));
+  if (jar.has("PC_SESSION") && !jar.has("LV_PC_SESSION")) jar.set("LV_PC_SESSION", jar.get("PC_SESSION"));
 
   const header = Array.from(jar.entries()).map(([name, value]) => `${name}=${value}`).join("; ");
   return { header, count: jar.size };
@@ -82,31 +103,40 @@ async function nextSessionRuleId() {
   return id;
 }
 
-async function installDingtalkSessionRule(targetUrl, cookieHeader, pageUrl) {
+async function installDingtalkSessionRule(targetUrl, cookieHeader, onLog = () => {}) {
   const id = await nextSessionRuleId();
-  const pageOrigin = safePageOrigin(pageUrl);
-  await chrome.declarativeNetRequest.updateSessionRules({
-    removeRuleIds: [id],
-    addRules: [{
-      id,
-      priority: 100,
-      action: {
-        type: "modifyHeaders",
-        requestHeaders: [
-          { header: "Cookie", operation: "set", value: cookieHeader },
-          { header: "Referer", operation: "set", value: `${pageOrigin}/` }
-        ]
-      },
-      condition: {
-        urlFilter: `|${targetUrl.href}|`,
-        initiatorDomains: [chrome.runtime.id],
-        resourceTypes: ["xmlhttprequest"]
-      }
-    }]
+  const buildRule = (requestHeaders) => ({
+    id,
+    priority: 100,
+    action: {
+      type: "modifyHeaders",
+      requestHeaders
+    },
+    condition: {
+      urlFilter: `|${targetUrl.href}|`,
+      initiatorDomains: [chrome.runtime.id],
+      resourceTypes: ["xmlhttprequest"]
+    }
   });
-  return async () => {
-    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [id] }).catch(() => {});
-  };
+  const variants = apiSessionHeaderVariants(cookieHeader);
+  let lastError = null;
+  for (const requestHeaders of variants) {
+    try {
+      await chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: [id],
+        addRules: [buildRule(requestHeaders)]
+      });
+      if (requestHeaders.length < variants[0].length) {
+        onLog("DingTalk API request context installed with a reduced header set.");
+      }
+      return async () => {
+        await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [id] }).catch(() => {});
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("Failed to install DingTalk API request context.");
 }
 
 export async function fetchDingtalkWithSession(rawUrl, options = {}) {
@@ -115,12 +145,14 @@ export async function fetchDingtalkWithSession(rawUrl, options = {}) {
   const cookies = await collectDingtalkCookieHeader({ pageUrl: options.pageUrl, sourceTabId: options.sourceTabId });
   if (!cookies.header) throw new Error("没有读取到钉钉登录 Cookie，请确认回放页确实使用当前浏览器账号播放。");
 
-  const removeRule = await installDingtalkSessionRule(url, cookies.header, options.pageUrl);
+  const removeRule = await installDingtalkSessionRule(url, cookies.header, options.onLog);
   options.onLog?.(`已读取 ${cookies.count} 个钉钉会话 Cookie，并仅对本次回放信息请求生效。`);
   try {
     return await fetchTextResource(url.href, {
       ...options,
-      headers: { Accept: "application/json, text/plain, */*", ...options.headers }
+      credentials: "omit",
+      cache: "no-store",
+      headers: { ...options.headers, Accept: DINGTALK_NAVIGATE_ACCEPT }
     });
   } finally {
     await removeRule();
