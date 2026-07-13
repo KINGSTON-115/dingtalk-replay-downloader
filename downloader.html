@@ -10,48 +10,68 @@
   <main class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true"></div>
-        <div>
+        <div class="brand-mark" aria-hidden="true">
+          <span class="brand-play"></span>
+          <span class="brand-signal signal-one"></span>
+          <span class="brand-signal signal-two"></span>
+        </div>
+        <div class="brand-copy">
           <p class="eyebrow" data-i18n="eyebrow">本地工具</p>
           <h1 data-i18n="appTitle">钉钉直播回放</h1>
+          <p class="brand-subtitle">稳定下载已授权回放</p>
         </div>
       </div>
 
       <div class="header-actions">
-        <button id="openTabBtn" class="button secondary compact" type="button" data-i18n="openTab">打开独立页</button>
+        <button id="openTabBtn" class="button secondary compact" type="button">
+          <span class="button-symbol" aria-hidden="true">↗</span>
+          <span data-i18n="openTab">打开独立页</span>
+        </button>
       </div>
     </header>
 
-    <div class="badges" aria-label="项目范围">
-      <span data-i18n="localOnly">本地处理</span>
-      <span data-i18n="authorizedOnly">已授权回放</span>
-      <span data-i18n="noServerAccount">无需插件账号</span>
+    <div class="trust-strip" aria-label="项目范围">
+      <span><i class="trust-dot local-dot" aria-hidden="true"></i><b data-i18n="localOnly">本地处理</b></span>
+      <span><i class="trust-dot auth-dot" aria-hidden="true"></i><b data-i18n="authorizedOnly">已授权回放</b></span>
+      <span><i class="trust-dot account-dot" aria-hidden="true"></i><b data-i18n="noServerAccount">无需插件账号</b></span>
     </div>
 
     <section class="panel source-panel">
       <div class="section-header">
-        <div>
-          <h2 data-i18n="sourceTitle">回放来源</h2>
-          <p data-i18n="sourceHint">先打开能播放的回放，再粘贴链接或使用当前页。</p>
+        <div class="section-heading">
+          <span class="step-index" aria-hidden="true">01</span>
+          <div>
+            <h2 data-i18n="sourceTitle">回放来源</h2>
+            <p data-i18n="sourceHint">先打开能播放的回放，再粘贴链接或使用当前页。</p>
+          </div>
         </div>
-        <button id="useCurrentTabBtn" class="button secondary compact" type="button" data-i18n="useCurrentTab">使用当前页</button>
+        <button id="useCurrentTabBtn" class="button secondary compact" type="button">
+          <span class="button-symbol current-page-symbol" aria-hidden="true"></span>
+          <span data-i18n="useCurrentTab">使用当前页</span>
+        </button>
       </div>
 
       <label class="field">
         <span data-i18n="replayLink">回放链接</span>
-        <textarea id="replayUrl" rows="5" spellcheck="false" data-i18n-placeholder="replayPlaceholder" placeholder="https://n.dingtalk.com/..."></textarea>
+        <div class="textarea-shell">
+          <textarea id="replayUrl" rows="5" spellcheck="false" data-i18n-placeholder="replayPlaceholder" placeholder="https://n.dingtalk.com/..."></textarea>
+        </div>
       </label>
 
       <div class="field-footer">
-        <span data-i18n="inputHint">支持完整链接，也支持 roomId=...&liveUuid=...</span>
+        <span class="input-hint"><i aria-hidden="true">i</i><span data-i18n="inputHint">支持完整链接，也支持 roomId=...&liveUuid=...</span></span>
         <button id="clearBtn" class="link-button" type="button" data-i18n="clear">清空</button>
       </div>
     </section>
 
     <section class="panel settings-panel">
       <div class="section-header compact-header">
-        <div>
-          <h2 data-i18n="settingsTitle">下载设置</h2>
+        <div class="section-heading">
+          <span class="step-index teal" aria-hidden="true">02</span>
+          <div>
+            <h2 data-i18n="settingsTitle">下载设置</h2>
+            <p>选择保存格式与下载并发</p>
+          </div>
         </div>
       </div>
 
@@ -61,32 +81,50 @@
           <div class="segmented-control">
             <label>
               <input type="radio" name="outputFormat" value="mp4" checked>
-              <span data-i18n="mp4Option">MP4</span>
+              <span class="format-option">
+                <strong data-i18n="mp4Option">MP4</strong>
+                <small>兼容播放</small>
+              </span>
             </label>
             <label>
               <input type="radio" name="outputFormat" value="ts">
-              <span data-i18n="tsOption">TS</span>
+              <span class="format-option">
+                <strong data-i18n="tsOption">TS</strong>
+                <small>原始媒体</small>
+              </span>
             </label>
           </div>
         </fieldset>
 
         <label class="field concurrency-field">
           <span data-i18n="concurrency">下载并发</span>
-          <input id="concurrency" type="number" min="1" max="12" value="4" inputmode="numeric">
+          <span class="number-control">
+            <input id="concurrency" type="number" min="1" max="12" value="4" inputmode="numeric">
+            <b>路</b>
+          </span>
         </label>
       </div>
     </section>
 
     <div class="actionbar">
-      <button id="startBtn" class="button primary" type="button" data-i18n="download">开始下载回放</button>
-      <button id="cancelBtn" class="button danger" type="button" disabled data-i18n="cancel">取消任务</button>
+      <button id="startBtn" class="button primary" type="button">
+        <span class="download-symbol" aria-hidden="true"></span>
+        <span data-i18n="download">开始下载回放</span>
+      </button>
+      <button id="cancelBtn" class="button danger" type="button" disabled>
+        <span class="cancel-symbol" aria-hidden="true"></span>
+        <span data-i18n="cancel">取消任务</span>
+      </button>
     </div>
 
-    <section class="status-panel" aria-live="polite">
+    <section id="statusPanel" class="status-panel" data-tone="idle" aria-live="polite">
       <div class="status-summary">
         <div class="status-left">
           <span class="status-dot" aria-hidden="true"></span>
-          <span id="statusText">就绪</span>
+          <div class="status-copy">
+            <small>当前状态</small>
+            <span id="statusText">就绪</span>
+          </div>
         </div>
         <strong id="progressText">0%</strong>
       </div>
@@ -97,6 +135,7 @@
 
       <div class="log-header">
         <span data-i18n="activityLog">运行日志</span>
+        <small>仅在本机显示</small>
       </div>
       <pre id="log" data-i18n-empty="logEmpty" data-empty="等待下载任务..."></pre>
     </section>
