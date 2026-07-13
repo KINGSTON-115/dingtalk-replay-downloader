@@ -6,7 +6,6 @@
 
 | 组件 | 版本 | 许可证 | 用途 |
 | --- | --- | --- | --- |
-| [mux.js](https://github.com/videojs/mux.js) | 7.1.0 | Apache-2.0 | TS 到 fragmented MP4 转封装 |
 | [m3u8-parser](https://github.com/videojs/m3u8-parser) | 7.2.0 | Apache-2.0 | HLS 清单解析 |
 | [mpd-parser](https://github.com/videojs/mpd-parser) | 1.4.0 | Apache-2.0 | DASH MPD 解析 |
 | `@babel/runtime` | 7.29.7 | MIT | 解析器运行时依赖 |
@@ -17,13 +16,7 @@
 | `dom-walk` | 0.1.2 | MIT | `min-document` 依赖 |
 | `process` | 0.11.10 | MIT | 浏览器 process 兼容层 |
 
-仓库内的 `vendor/mux.min.js` 保留上游标识：
-
-```text
-@name mux.js @version 7.1.0 @license Apache-2.0
-```
-
-其余运行时依赖由 esbuild 打包进 `build/ui/downloader.js`，构建时保留许可证注释。
+运行时依赖由 esbuild 打包进 `build/ui/downloader.js`，构建时保留许可证注释。
 
 ## 开发工具
 

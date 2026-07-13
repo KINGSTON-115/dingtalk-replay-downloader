@@ -4,7 +4,7 @@ import { stableId } from "../core/url.js";
 const API_ORIGIN = "https://lv.dingtalk.com";
 const API_PATH = "/getOpenLiveInfo";
 export const DINGTALK_DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
-const DINGTALK_NAVIGATE_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8";
+const DINGTALK_API_ACCEPT = "application/json, text/plain, */*";
 const COOKIE_URLS = [
   "https://lv.dingtalk.com/",
   "https://n.dingtalk.com/",
@@ -15,20 +15,31 @@ const COOKIE_URLS = [
 ];
 const COOKIE_DOMAINS = [".dingtalk.com", "dingtalk.com", "lv.dingtalk.com", ".lv.dingtalk.com", "n.dingtalk.com", ".n.dingtalk.com", "h5.dingtalk.com", "login.dingtalk.com"];
 
-function apiSessionHeaderVariants(cookieHeader) {
-  const originalLike = [
+function safeDingtalkPageUrl(value) {
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    if (url.protocol === "https:" && /(?:^|\.)dingtalk\.com$/i.test(url.hostname)) return url.href;
+  } catch {
+    // 使用钉钉回放页的默认地址。
+  }
+  return "https://n.dingtalk.com/dingding/live-room/index.html";
+}
+
+function apiSessionHeaderVariants(cookieHeader, pageUrl) {
+  const fullHeaders = [
     { header: "Cookie", operation: "set", value: cookieHeader },
+    { header: "Referer", operation: "set", value: safeDingtalkPageUrl(pageUrl) },
+    { header: "Origin", operation: "set", value: safePageOrigin(pageUrl) },
     { header: "Accept-Language", operation: "set", value: "zh-CN,zh;q=0.9" },
-    { header: "Sec-Fetch-Site", operation: "set", value: "none" },
-    { header: "Sec-Fetch-Mode", operation: "set", value: "navigate" },
-    { header: "Sec-Fetch-User", operation: "set", value: "?1" },
-    { header: "Sec-Fetch-Dest", operation: "set", value: "document" },
     { header: "User-Agent", operation: "set", value: DINGTALK_DESKTOP_USER_AGENT }
   ];
   return [
-    originalLike,
-    originalLike.filter((item) => item.header !== "User-Agent"),
-    originalLike.filter((item) => item.header === "Cookie" || item.header === "Accept-Language")
+    fullHeaders,
+    fullHeaders.filter((item) => item.header !== "User-Agent"),
+    fullHeaders.filter((item) => !["User-Agent", "Origin"].includes(item.header)),
+    fullHeaders.filter((item) => ["Cookie", "Referer"].includes(item.header)),
+    fullHeaders.filter((item) => item.header === "Cookie")
   ];
 }
 
@@ -103,7 +114,7 @@ async function nextSessionRuleId() {
   return id;
 }
 
-async function installDingtalkSessionRule(targetUrl, cookieHeader, onLog = () => {}) {
+async function installDingtalkSessionRule(targetUrl, cookieHeader, pageUrl, onLog = () => {}) {
   const id = await nextSessionRuleId();
   const buildRule = (requestHeaders) => ({
     id,
@@ -114,11 +125,10 @@ async function installDingtalkSessionRule(targetUrl, cookieHeader, onLog = () =>
     },
     condition: {
       urlFilter: `|${targetUrl.href}|`,
-      initiatorDomains: [chrome.runtime.id],
-      resourceTypes: ["xmlhttprequest"]
+      resourceTypes: ["xmlhttprequest", "other"]
     }
   });
-  const variants = apiSessionHeaderVariants(cookieHeader);
+  const variants = apiSessionHeaderVariants(cookieHeader, pageUrl);
   let lastError = null;
   for (const requestHeaders of variants) {
     try {
@@ -127,7 +137,7 @@ async function installDingtalkSessionRule(targetUrl, cookieHeader, onLog = () =>
         addRules: [buildRule(requestHeaders)]
       });
       if (requestHeaders.length < variants[0].length) {
-        onLog("DingTalk API request context installed with a reduced header set.");
+        onLog("已按兼容模式安装钉钉回放信息请求上下文。");
       }
       return async () => {
         await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [id] }).catch(() => {});
@@ -136,7 +146,7 @@ async function installDingtalkSessionRule(targetUrl, cookieHeader, onLog = () =>
       lastError = error;
     }
   }
-  throw lastError || new Error("Failed to install DingTalk API request context.");
+  throw lastError || new Error("无法安装钉钉回放信息请求上下文。");
 }
 
 export async function fetchDingtalkWithSession(rawUrl, options = {}) {
@@ -145,14 +155,14 @@ export async function fetchDingtalkWithSession(rawUrl, options = {}) {
   const cookies = await collectDingtalkCookieHeader({ pageUrl: options.pageUrl, sourceTabId: options.sourceTabId });
   if (!cookies.header) throw new Error("没有读取到钉钉登录 Cookie，请确认回放页确实使用当前浏览器账号播放。");
 
-  const removeRule = await installDingtalkSessionRule(url, cookies.header, options.onLog);
+  const removeRule = await installDingtalkSessionRule(url, cookies.header, options.pageUrl, options.onLog);
   options.onLog?.(`已读取 ${cookies.count} 个钉钉会话 Cookie，并仅对本次回放信息请求生效。`);
   try {
     return await fetchTextResource(url.href, {
       ...options,
-      credentials: "omit",
+      credentials: "include",
       cache: "no-store",
-      headers: { ...options.headers, Accept: DINGTALK_NAVIGATE_ACCEPT }
+      headers: { ...options.headers, Accept: DINGTALK_API_ACCEPT, "Accept-Language": "zh-CN,zh;q=0.9" }
     });
   } finally {
     await removeRule();

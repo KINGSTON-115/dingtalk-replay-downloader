@@ -93,7 +93,7 @@
       <div class="section-header compact-header">
         <div>
           <h2>下载设置</h2>
-          <p>浏览器模式优先流式写盘；复杂音视频合并可使用本地增强。</p>
+          <p>浏览器模式保持源格式；MP4/MKV 合并交给 FFmpeg 本地增强。</p>
         </div>
       </div>
 
@@ -108,9 +108,8 @@
         <label class="field">
           <span>输出格式</span>
           <select id="outputFormat">
-            <option value="auto">自动选择</option>
-            <option value="mp4">MP4</option>
-            <option value="ts">原始 TS</option>
+            <option value="auto">保持源格式（推荐）</option>
+            <option value="mp4">MP4（FFmpeg 增强）</option>
             <option value="mkv">MKV（增强模式）</option>
           </select>
         </label>
@@ -161,7 +160,6 @@
     </section>
   </main>
 
-  <script src="vendor/mux.min.js"></script>
   <script type="module" src="build/ui/downloader.js"></script>
 </body>
 </html>

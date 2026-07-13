@@ -25,6 +25,21 @@ function response(bytes, status = 200) {
 }
 
 describe("下载引擎集成", () => {
+  it("浏览器模式对 TS 清单始终保持源格式，避免生成绿块 MP4", () => {
+    const analysis = {
+      protocol: "hls",
+      resolved: { title: "课程", playbackUrl: "https://cdn.example/media.m3u8" },
+      plan: {
+        playlist: { container: "ts" },
+        audioPlaylist: null,
+        subtitlePlaylist: null
+      }
+    };
+    expect(describeOutputs(analysis, { outputFormat: "mp4" })).toEqual([
+      expect.objectContaining({ filename: "课程.ts", extension: "ts", mime: "video/mp2t", transform: "copy" })
+    ]);
+  });
+
   it("fMP4 只写一次初始化分片并保持媒体顺序", async () => {
     const resources = new Map([
       ["https://cdn.example/init.mp4", new Uint8Array([0, 1])],

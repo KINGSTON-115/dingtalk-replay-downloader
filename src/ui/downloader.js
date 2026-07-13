@@ -237,7 +237,7 @@ function requestContextOptionsForResolved(resolved) {
 
 function dingtalkMediaHttpOptions() {
   return {
-    credentials: "omit",
+    credentials: "include",
     headers: {
       Accept: "*/*",
       "Accept-Language": "zh-CN,zh;q=0.9"
@@ -632,11 +632,14 @@ async function updateNativeStatus(interactive = false) {
 
 function updateOutputOptions() {
   const native = els.engineSelect.value === "native";
+  const source = Array.from(els.outputFormat.options).find((option) => option.value === "auto");
+  const mp4 = Array.from(els.outputFormat.options).find((option) => option.value === "mp4");
   const mkv = Array.from(els.outputFormat.options).find((option) => option.value === "mkv");
-  const ts = Array.from(els.outputFormat.options).find((option) => option.value === "ts");
+  if (source) source.disabled = native;
+  if (mp4) mp4.disabled = !native;
   if (mkv) mkv.disabled = !native;
-  if (ts) ts.disabled = native;
-  if ((!native && els.outputFormat.value === "mkv") || (native && els.outputFormat.value === "ts")) {
+  const validFormats = native ? ["mp4", "mkv"] : ["auto"];
+  if (!validFormats.includes(els.outputFormat.value)) {
     els.outputFormat.value = native ? "mp4" : "auto";
   }
 }

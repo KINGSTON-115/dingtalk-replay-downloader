@@ -3,7 +3,6 @@ import { formatBytes } from "../core/media.js";
 import { sanitizeFileName, stableId } from "../core/url.js";
 import { reloadHlsPlaylist } from "../protocols/hls.js";
 import { SegmentFetcher, downloadOrderedSegments } from "./segments.js";
-import { TsTransmuxSink } from "./transmux.js";
 import { WebVttConcatSink } from "./text-tracks.js";
 import { closeSinks, abortSinks, downloadDirectFile } from "./sinks.js";
 
@@ -19,19 +18,15 @@ function descriptor(role, title, extension, mime, transform = "copy") {
   };
 }
 
-function hlsTrackDescriptor(role, title, playlist, requestedFormat) {
+function hlsTrackDescriptor(role, title, playlist) {
   if (playlist.container === "vtt") return descriptor(role, title, "vtt", "text/vtt", "vtt-concat");
   if (playlist.container === "fmp4") return descriptor(role, title, role === "audio" ? "m4a" : "mp4", role === "audio" ? "audio/mp4" : "video/mp4", "fmp4-copy");
-  if (requestedFormat === "mp4" || requestedFormat === "auto") {
-    return descriptor(role, title, role === "audio" ? "m4a" : "mp4", role === "audio" ? "audio/mp4" : "video/mp4", "transmux");
-  }
   if (playlist.container === "aac") return descriptor(role, title, "aac", "audio/aac", "copy");
   return descriptor(role, title, "ts", "video/mp2t", "copy");
 }
 
-export function describeOutputs(analysis, options = {}) {
+export function describeOutputs(analysis) {
   const title = analysis.resolved.title;
-  const format = ["auto", "mp4", "ts"].includes(options.outputFormat) ? options.outputFormat : "auto";
   if (analysis.protocol === "file") {
     return [descriptor("main", title, analysis.plan.extension || "mp4", analysis.plan.mime || "video/mp4", "browser-download")];
   }
@@ -39,13 +34,13 @@ export function describeOutputs(analysis, options = {}) {
     const outputs = [];
     if (analysis.plan.audioPlaylist) {
       outputs.push(
-        hlsTrackDescriptor("video", title, analysis.plan.playlist, format),
-        hlsTrackDescriptor("audio", title, analysis.plan.audioPlaylist, format)
+        hlsTrackDescriptor("video", title, analysis.plan.playlist),
+        hlsTrackDescriptor("audio", title, analysis.plan.audioPlaylist)
       );
     } else {
-      outputs.push(hlsTrackDescriptor("main", title, analysis.plan.playlist, format));
+      outputs.push(hlsTrackDescriptor("main", title, analysis.plan.playlist));
     }
-    if (analysis.plan.subtitlePlaylist) outputs.push(hlsTrackDescriptor("subtitle", title, analysis.plan.subtitlePlaylist, format));
+    if (analysis.plan.subtitlePlaylist) outputs.push(hlsTrackDescriptor("subtitle", title, analysis.plan.subtitlePlaylist));
     return outputs;
   }
   if (analysis.protocol === "dash") {
@@ -104,8 +99,7 @@ async function downloadPlaylistOnce(playlist, sink, descriptorInfo, options) {
       options.onLog?.(`分片请求失败，${Math.round(delay / 100) / 10} 秒后进行第 ${attempt} 次重试：${error.message}`);
     }
   });
-  const targetSink = descriptorInfo.transform === "transmux" ? new TsTransmuxSink(sink) : sink;
-  const writableSink = descriptorInfo.transform === "vtt-concat" ? new WebVttConcatSink(targetSink) : targetSink;
+  const writableSink = descriptorInfo.transform === "vtt-concat" ? new WebVttConcatSink(sink) : sink;
   const mapState = { mapId: "" };
   await downloadOrderedSegments(playlist.segments, {
     concurrency: options.concurrency,
@@ -139,8 +133,7 @@ async function recordLivePlaylist(initialPlaylist, sink, descriptorInfo, options
       options.onLog?.(`直播分片请求重试：${info.error.message}`);
     }
   });
-  const targetSink = descriptorInfo.transform === "transmux" ? new TsTransmuxSink(sink) : sink;
-  const writableSink = descriptorInfo.transform === "vtt-concat" ? new WebVttConcatSink(targetSink) : targetSink;
+  const writableSink = descriptorInfo.transform === "vtt-concat" ? new WebVttConcatSink(sink) : sink;
   const mapState = { mapId: "" };
   const seen = new Set();
   let playlist = initialPlaylist;

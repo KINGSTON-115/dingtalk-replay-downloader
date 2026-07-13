@@ -76,18 +76,16 @@ describe("钉钉 Cookie 会话", () => {
     expect(resource.text).toContain("isLogined");
     expect(rule.action.requestHeaders).toEqual([
       { header: "Cookie", operation: "set", value: "LV_PC_SESSION=token; PC_SESSION=token" },
+      { header: "Referer", operation: "set", value: "https://n.dingtalk.com/live?roomId=r&liveUuid=u" },
+      { header: "Origin", operation: "set", value: "https://n.dingtalk.com" },
       { header: "Accept-Language", operation: "set", value: "zh-CN,zh;q=0.9" },
-      { header: "Sec-Fetch-Site", operation: "set", value: "none" },
-      { header: "Sec-Fetch-Mode", operation: "set", value: "navigate" },
-      { header: "Sec-Fetch-User", operation: "set", value: "?1" },
-      { header: "Sec-Fetch-Dest", operation: "set", value: "document" },
       { header: "User-Agent", operation: "set", value: DINGTALK_DESKTOP_USER_AGENT }
     ]);
     expect(rule.condition).toMatchObject({
       urlFilter: "|https://lv.dingtalk.com/getOpenLiveInfo?roomId=r&liveUuid=u|",
-      initiatorDomains: ["abcdefghijklmnopabcdefghijklmnop"],
-      resourceTypes: ["xmlhttprequest"]
+      resourceTypes: ["xmlhttprequest", "other"]
     });
+    expect(rule.condition.initiatorDomains).toBeUndefined();
     expect(updates[1]).toEqual({ removeRuleIds: [rule.id] });
   });
 

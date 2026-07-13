@@ -252,7 +252,8 @@ async function testUiBundle() {
                 globalThis.__dingtalkCookieRuleAdds += 1;
                 if (
                   String(rule.condition?.urlFilter || "").includes("https://lv.dingtalk.com/getOpenLiveInfo") &&
-                  requestHeaders.some((header) => header.header === "Sec-Fetch-Mode" && header.value === "navigate") &&
+                  requestHeaders.some((header) => header.header === "Referer") &&
+                  requestHeaders.some((header) => header.header === "Origin" && header.value === "https://n.dingtalk.com") &&
                   requestHeaders.some((header) => header.header === "Accept-Language")
                 ) {
                   dingtalkApiContextRuleIds.add(rule.id);

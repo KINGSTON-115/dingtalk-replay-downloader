@@ -55,7 +55,6 @@ $items = @(
   "LICENSE.zh-CN.md",
   "THIRD_PARTY_NOTICES.md",
   "docs",
-  "vendor",
   "build",
   "icons",
   "native-host",
