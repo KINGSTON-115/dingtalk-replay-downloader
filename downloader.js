@@ -96,6 +96,7 @@ const els = {
   statusText: document.getElementById("statusText"),
   progressText: document.getElementById("progressText"),
   progressBar: document.getElementById("progressBar"),
+  statusPanel: document.getElementById("statusPanel"),
   log: document.getElementById("log")
 };
 
@@ -148,6 +149,13 @@ function log(message) {
 function setStatus(key, percent, params = {}) {
   currentStatus = { key, params, percent };
   els.statusText.textContent = t(key, params);
+  els.statusPanel.dataset.tone = key === "statusFailed"
+    ? "error"
+    : key === "statusDone"
+      ? "success"
+      : key === "statusIdle"
+        ? "idle"
+        : "running";
   if (typeof percent === "number") {
     const safe = Math.max(0, Math.min(100, percent));
     els.progressText.textContent = `${Math.round(safe)}%`;
@@ -750,6 +758,8 @@ async function fillCurrentTabUrl() {
 }
 
 function setBusy(isBusy) {
+  document.body.classList.toggle("is-busy", isBusy);
+  els.statusPanel.setAttribute("aria-busy", String(isBusy));
   els.startBtn.disabled = isBusy;
   els.cancelBtn.disabled = !isBusy;
   els.replayUrl.disabled = isBusy;
